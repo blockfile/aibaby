@@ -22,6 +22,7 @@ const { getCurveMarket } = require('../services/curvemarket');
 const { getQuotePrice } = require('../services/quoteprice');
 const { getRewardPrice } = require('../services/rewardprice');
 const { getBurns } = require('../services/burns');
+const { getCreatorFees } = require('../services/creatorfees');
 
 const router = express.Router();
 
@@ -109,7 +110,7 @@ function withSupplyFallback(token, fallback) {
  * once the explorer has an exchange rate), then the bonding-curve computation
  * — so the tile shows a real number at every stage of the token's life.
  */
-function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, curve = {}, quote = {}, rewardPrice = {}, symbol, tokenAddress, supply = null }) {
+function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, curve = {}, quote = {}, rewardPrice = {}, creatorFees = {}, symbol, tokenAddress, supply = null }) {
   const token = withSupplyFallback(explorerToken, supply);
   const priceUsd = market.priceUsd ?? curve.priceUsd ?? null;
   const totalRewarded = rewards.totalRewarded ?? null; // NVDA token amount
@@ -155,6 +156,21 @@ function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, cu
     burnedPctOfSupply: burnedPctOfSupply(burns, token),
     burns: burns.burns ?? null,
 
+    // ── Creator fees EARNED ─────────────────────────────────────────────────
+    // What the launch has swept in total, before the split takes its share for
+    // gas. Deliberately its own pair of fields rather than folded into the
+    // rewarded total: that one is what holders were actually PAID, with a
+    // transaction hash behind every row of the feed, and this one is larger.
+    // Showing this under that label would be a claim anyone could disprove by
+    // adding up /rewards.
+    feesEarned: creatorFees.feesEarned ?? null,
+    feesEarnedUsd:
+      typeof creatorFees.feesEarned === 'number' && typeof quote.priceUsd === 'number'
+        ? creatorFees.feesEarned * quote.priceUsd
+        : null,
+    // How many times pons has swept fees into the escrow.
+    sweeps: creatorFees.sweeps ?? null,
+
     priceUsd,
     price: priceUsd,
     liquidityUsd: market.liquidityUsd ?? null,
@@ -168,7 +184,7 @@ router.get('/stats', async (req, res, next) => {
   try {
     // Independent upstreams — one being down must not delay or fail the other,
     // so all settle and a rejection degrades to nulls for its own fields only.
-    const [marketResult, tokenResult, rewardsResult, burnsResult, curveResult, quoteResult, rewardPriceResult] =
+    const [marketResult, tokenResult, rewardsResult, burnsResult, curveResult, quoteResult, rewardPriceResult, feesResult] =
       await Promise.allSettled([
         getMarketData(),
         getTokenInfo(),
@@ -177,6 +193,7 @@ router.get('/stats', async (req, res, next) => {
         getCurveMarket(),
         getQuotePrice(),
         getRewardPrice(),
+        getCreatorFees(),
       ]);
 
     const market = marketResult.status === 'fulfilled' ? marketResult.value : {};
@@ -186,6 +203,7 @@ router.get('/stats', async (req, res, next) => {
     const curve = curveResult.status === 'fulfilled' ? curveResult.value : {};
     const quote = quoteResult.status === 'fulfilled' ? quoteResult.value : {};
     const rewardPrice = rewardPriceResult.status === 'fulfilled' ? rewardPriceResult.value : {};
+    const creatorFees = feesResult.status === 'fulfilled' ? feesResult.value : {};
 
     if (marketResult.status === 'rejected') {
       console.warn('[artificialneko] market data unavailable:', marketResult.reason?.message);
@@ -208,6 +226,9 @@ router.get('/stats', async (req, res, next) => {
     if (rewardPriceResult.status === 'rejected') {
       console.warn('[artificialneko] AI price unavailable:', rewardPriceResult.reason?.message);
     }
+    if (feesResult.status === 'rejected') {
+      console.warn('[artificialneko] creator-fee total unavailable:', feesResult.reason?.message);
+    }
 
     res.json(
       buildStats({
@@ -218,6 +239,7 @@ router.get('/stats', async (req, res, next) => {
         curve,
         quote,
         rewardPrice,
+        creatorFees,
         symbol: config.tokenSymbol,
         tokenAddress: config.tokenAddress,
         supply: supplyFallback(config),

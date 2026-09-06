@@ -279,3 +279,44 @@ test('with no launch pair listed, the deepest real pool is still used', () => {
   );
   assert.strictEqual(out.marketCap, 677_601);
 });
+
+// ── creator fees earned, beside what reached holders ─────────────────────
+
+test('fees EARNED is served alongside what was DISTRIBUTED, never instead of it', () => {
+  // Two different claims about two different numbers. `totalRewarded` is what
+  // the bot paid holders, every row backed by a transaction hash. `feesEarned`
+  // is what the launch has swept in total, before the split takes its share.
+  // The second is the larger and the more flattering; it is only worth showing
+  // because it is labelled as itself.
+  const out = buildStats({
+    market: {},
+    token: {},
+    rewards: { totalRewarded: 34.15 },
+    creatorFees: { feesEarned: 246.642441851, sweeps: 187 },
+    quote: { priceUsd: 231.6 },
+    rewardPrice: { priceUsd: 231.6 },
+    symbol: 'NEKO',
+    tokenAddress: '0xtoken',
+  });
+  assert.ok(Math.abs(out.feesEarned - 246.642441851) < 1e-6, `got ${out.feesEarned}`);
+  assert.strictEqual(out.sweeps, 187);
+  assert.ok(Math.abs(out.feesEarnedUsd - 246.642441851 * 231.6) < 1e-3);
+  assert.strictEqual(out.rewardDistributed, 34.15, 'and the distributed figure is untouched');
+});
+
+test('fees earned with no price gives a null USD, not a zero', () => {
+  const out = buildStats({
+    market: {}, token: {}, rewards: {},
+    creatorFees: { feesEarned: 246.64, sweeps: 187 },
+    quote: {}, symbol: 'NEKO', tokenAddress: '0xtoken',
+  });
+  assert.strictEqual(out.feesEarned, 246.64);
+  assert.strictEqual(out.feesEarnedUsd, null);
+});
+
+test('no creator-fee data at all leaves the tile hidden rather than zeroed', () => {
+  const out = buildStats({ market: {}, token: {}, rewards: {}, symbol: 'NEKO', tokenAddress: '0xtoken' });
+  assert.strictEqual(out.feesEarned, null);
+  assert.strictEqual(out.sweeps, null);
+  assert.strictEqual(out.feesEarnedUsd, null);
+});

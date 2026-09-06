@@ -198,6 +198,13 @@ zero as a real number.
 
 ### The fee gauge
 
+**`feesEarned` and `totalRewarded` are different claims.** `feesEarned` is what
+the launch has swept in total, from pons — larger, and before the split takes
+its share for gas. `totalRewarded` is what the bot actually paid holders, summed
+from its own ledger with a transaction hash behind every row of `/rewards`.
+Serving both is what lets a site show the flywheel honestly; serving one under
+the other's label is a claim anyone can disprove by adding up the feed.
+
 `GET /rewards/meter` and `GET /distribution` serve the same gauge in two
 shapes. The meter is what the site's `RewardMeter` reads: `state` is
 `charging` / `ready` / `distributing` / `idle`, and `secondsUntilCheck` counts
