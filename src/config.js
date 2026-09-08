@@ -105,7 +105,7 @@ const devPct = +(100 - rewardPct - burnPct - gasPct).toFixed(6);
 
 // Accumulation is the default: this launch's fees are worth hundreds of dollars
 // per token, so firing on every tick would pay gas to move dust.
-const triggerMode = ['interval', 'accumulation'].includes(String(process.env.TRIGGER_MODE || '').toLowerCase())
+const triggerMode = ['interval', 'accumulation', 'token'].includes(String(process.env.TRIGGER_MODE || '').toLowerCase())
   ? String(process.env.TRIGGER_MODE).toLowerCase()
   : 'accumulation';
 
@@ -320,6 +320,10 @@ const config = {
   // The gate is denominated in USD, not tokens: fees accrue in NVDA and one
   // NVDA is worth hundreds of dollars, so a token threshold is unusable.
   claimEveryUsd: num(process.env.CLAIM_EVERY_USD, 100),
+  // TRIGGER_MODE=token only: fire once this many whole quote tokens are
+  // claimable. Needs no price feed, so a DexScreener outage cannot cost a
+  // trigger interval the way it does under accumulation.
+  claimEveryTokens: num(process.env.CLAIM_EVERY_TOKENS, 1),
   // DRY_RUN only: simulated NVDA accrued to the vault per tick.
   dryRunFeePerPoll: num(process.env.DRY_RUN_FEE_PER_POLL, 0.05),
   // Gas is NOT self-funding here: the dev cut is NVDA while gas is ETH. Below

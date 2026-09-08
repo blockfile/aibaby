@@ -448,3 +448,45 @@ test('two ticks that can BOTH pay still cannot run at once', async () => {
   await first;
   assert.strictEqual(started, 1, 'only one cycle may hold the wallet nonce');
 });
+
+// ── TRIGGER_MODE=token: a threshold in the asset, needing no price ────────
+// Available here but NOT the default: this launch gates in USD. A sibling fork
+// paid in a ~$150 tokenized stock uses it, where "every 1 token" is a number an
+// operator reads directly and no price feed is involved.
+//
+// That last part is the real difference. `accumulation` must HOLD whenever
+// DexScreener cannot price the quote asset — claiming blind would empty the
+// escrow at an unknown value — and on an hourly trigger that hold costs an hour.
+// A token threshold has nothing to be blind about.
+
+const TOKEN_GATE = { triggerMode: 'token', claimEveryTokens: 1 };
+
+test('token mode fires at the token threshold', () => {
+  assert.strictEqual(shouldFire({ claimableQuote: 1, priceUsd: 150, ...TOKEN_GATE }).fire, true);
+});
+
+test('token mode holds below it, however valuable the tokens are', () => {
+  const out = shouldFire({ claimableQuote: 0.6, priceUsd: 10000, ...TOKEN_GATE });
+  assert.strictEqual(out.fire, false, '$6,000 of a token is still less than 1 token');
+  assert.match(out.reason, /token/i);
+});
+
+test('token mode needs NO price — that is the whole point of it', () => {
+  assert.strictEqual(shouldFire({ claimableQuote: 2, priceUsd: null, ...TOKEN_GATE }).fire, true);
+});
+
+test('token mode still reports USD when a price is available, for the gauge', () => {
+  assert.strictEqual(shouldFire({ claimableQuote: 2, priceUsd: 150, ...TOKEN_GATE }).usd, 300);
+  assert.strictEqual(shouldFire({ claimableQuote: 2, priceUsd: null, ...TOKEN_GATE }).usd, null);
+});
+
+test('token mode is NOT treated as interval mode', () => {
+  // interval fires on any positive balance; falling through to it would pay out
+  // dust every tick instead of every 1 token.
+  assert.strictEqual(shouldFire({ claimableQuote: 0.0001, priceUsd: 150, ...TOKEN_GATE }).fire, false);
+});
+
+test('adding the mode does not change THIS deployment, which gates in USD', () => {
+  const config = require('../config');
+  assert.strictEqual(config.triggerMode, 'accumulation', 'neko is live on the USD gate');
+});

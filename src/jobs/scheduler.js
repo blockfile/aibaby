@@ -85,21 +85,48 @@ async function getClaimableQuote(deps = {}) {
  * tries again. Interval mode skips the price entirely, since it has no
  * threshold to compare against.
  *
- * @param {{claimableQuote:number, priceUsd:number|null, triggerMode:string, claimEveryUsd:number}} args
+ * TOKEN mode gates on the asset itself instead, and therefore needs no price at
+ * all. That is its advantage, not a simplification: the hold above costs a whole
+ * trigger interval every time DexScreener is unavailable, and 1 token is 1 token
+ * whether or not anything can say what it is worth. Not the default here — this
+ * launch gates in USD — but a sibling paid in a ~$150 tokenized stock uses it.
+ *
+ * @param {{claimableQuote:number, priceUsd:number|null, triggerMode:string,
+ *           claimEveryUsd:number, claimEveryTokens:number, symbol:string}} args
  * @returns {{fire: boolean, reason: string, usd: number|null}}
  */
-function shouldFire({ claimableQuote, priceUsd, triggerMode, claimEveryUsd }) {
+function shouldFire({ claimableQuote, priceUsd, triggerMode, claimEveryUsd, claimEveryTokens, symbol = 'tokens' }) {
   if (!(claimableQuote > 0)) return { fire: false, reason: 'nothing claimable', usd: null };
+
+  const priced = typeof priceUsd === 'number' && Number.isFinite(priceUsd) && priceUsd > 0;
+  // Computed in every mode because the site's gauge draws a dollar figure — but
+  // only `accumulation` lets it decide anything.
+  const opportunisticUsd = priced ? claimableQuote * priceUsd : null;
+
+  if (triggerMode === 'token') {
+    if (claimableQuote < claimEveryTokens) {
+      return {
+        fire: false,
+        reason: `below the token threshold (${claimableQuote} < ${claimEveryTokens} ${symbol})`,
+        usd: opportunisticUsd,
+      };
+    }
+    return {
+      fire: true,
+      reason: `token threshold met (${claimableQuote} >= ${claimEveryTokens} ${symbol})`,
+      usd: opportunisticUsd,
+    };
+  }
 
   if (triggerMode !== 'accumulation') {
     return { fire: true, reason: 'interval mode — firing on whatever has accrued', usd: null };
   }
 
-  if (typeof priceUsd !== 'number' || !Number.isFinite(priceUsd) || !(priceUsd > 0)) {
-    return { fire: false, reason: 'NVDA price unavailable — holding rather than claiming blind', usd: null };
+  if (!priced) {
+    return { fire: false, reason: `${symbol} price unavailable — holding rather than claiming blind`, usd: null };
   }
 
-  const usd = claimableQuote * priceUsd;
+  const usd = opportunisticUsd;
   if (usd < claimEveryUsd) {
     return { fire: false, reason: `below the accumulation threshold ($${usd.toFixed(2)} < $${claimEveryUsd})`, usd };
   }
@@ -170,6 +197,8 @@ async function pollOnce(trigger, deps = {}) {
       priceUsd,
       triggerMode: deps.triggerMode !== undefined ? deps.triggerMode : config.triggerMode,
       claimEveryUsd: deps.claimEveryUsd !== undefined ? deps.claimEveryUsd : config.claimEveryUsd,
+      claimEveryTokens: deps.claimEveryTokens !== undefined ? deps.claimEveryTokens : config.claimEveryTokens,
+      symbol: config.quoteSymbol,
     });
     state.lastClaimableUsd = gate.usd;
 
