@@ -1,18 +1,12 @@
 # Deploying artificialcat to Ubuntu 24.04
 
-Site: **https://artificialcat.example** · API: **https://api.artificialcat.example**
-
-> **No domain yet.** `artificialcat.example` is a placeholder — `.example` is
-> reserved and can never resolve, so a step run before the substitution fails
-> loudly instead of half-working against someone else's host. Once the domain
-> is bought, replace it in `.env` (`CORS_ORIGINS`) and in this file:
-> `sed -i 's/artificialcat\.example/yourdomain.com/g' DEPLOY.md .env`
+Site: **https://artificialcat.meme** · API: **https://api.artificialcat.meme**
 
 Two PM2 processes over one MongoDB, from `/var/www/artificialcat`:
 
 | Process | Port | Reachable from |
 | --- | --- | --- |
-| `artificialcat-api` (`server.js`) | 3000 | the internet, via nginx → `api.artificialcat.example` |
+| `artificialcat-api` (`server.js`) | 3000 | the internet, via nginx → `api.artificialcat.meme` |
 | `artificialcat-bot` (`bot.js`) | 3100 | **localhost only** — never proxied |
 
 The bot holds the wallet key and `POST /run` pays real money out, so its port
@@ -30,8 +24,8 @@ transfer graph. The **disperser is per-project**: it is the recorded sender of
 every payout, so sharing one links the projects on any bubblemap. Deploy one at
 go-live with `node scripts/deploy-disperser-v2.js --confirm`.
 
-**Before you start:** point a DNS `A` record for `api.artificialcat.example` at the
-server's public IP and let it propagate (`dig +short api.artificialcat.example`). Certbot
+**Before you start:** point a DNS `A` record for `api.artificialcat.meme` at the
+server's public IP and let it propagate (`dig +short api.artificialcat.meme`). Certbot
 cannot issue a certificate until it resolves.
 
 ## 1. Base prep
@@ -180,7 +174,7 @@ TRIGGER_SCHEDULE=0 * * * *
 MONGODB_URI=                   # from step 4
 MONGODB_DB=artificialcat
 API_KEY=                       # any long random string; guards the bot's /run
-CORS_ORIGINS=https://artificialcat.example,https://www.artificialcat.example
+CORS_ORIGINS=https://artificialcat.meme,https://www.artificialcat.meme
 ```
 
 Generate the API key rather than inventing one:
@@ -229,11 +223,11 @@ apt install -y nginx
 This proxies **only** port 3000. The bot's 3100 is deliberately absent.
 
 ```bash
-tee /etc/nginx/sites-available/api.artificialcat.example > /dev/null <<'NGINX'
+tee /etc/nginx/sites-available/api.artificialcat.meme > /dev/null <<'NGINX'
 server {
     listen 80;
     listen [::]:80;
-    server_name api.artificialcat.example;
+    server_name api.artificialcat.meme;
 
     access_log /var/log/nginx/artificialcat.access.log;
     error_log  /var/log/nginx/artificialcat.error.log;
@@ -254,24 +248,24 @@ server {
 }
 NGINX
 
-ln -s /etc/nginx/sites-available/api.artificialcat.example /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/api.artificialcat.meme /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
-curl http://api.artificialcat.example/health
+curl http://api.artificialcat.meme/health
 ```
 
 ## 9. Certbot / HTTPS
 
-The site is HTTPS, so the API must be — a browser on `https://artificialcat.example`
-refuses to fetch `http://api.artificialcat.example` as mixed content.
+The site is HTTPS, so the API must be — a browser on `https://artificialcat.meme`
+refuses to fetch `http://api.artificialcat.meme` as mixed content.
 
 ```bash
 snap install core && snap refresh core
 snap install --classic certbot
 ln -sf /snap/bin/certbot /usr/bin/certbot
 
-certbot --nginx -d api.artificialcat.example --redirect \
+certbot --nginx -d api.artificialcat.meme --redirect \
   -m you@example.com --agree-tos --no-eff-email
 
 certbot renew --dry-run
@@ -281,17 +275,17 @@ systemctl list-timers | grep certbot
 ## 10. Verify
 
 ```bash
-curl https://api.artificialcat.example/health
-curl https://api.artificialcat.example/token
-curl https://api.artificialcat.example/stats
-curl "https://api.artificialcat.example/rewards?limit=5"
+curl https://api.artificialcat.meme/health
+curl https://api.artificialcat.meme/token
+curl https://api.artificialcat.meme/stats
+curl "https://api.artificialcat.meme/rewards?limit=5"
 
 # CORS — must echo the site's origin back
-curl -s -H "Origin: https://artificialcat.example" -D- -o /dev/null \
-  https://api.artificialcat.example/stats | grep -i access-control-allow-origin
+curl -s -H "Origin: https://artificialcat.meme" -D- -o /dev/null \
+  https://api.artificialcat.meme/stats | grep -i access-control-allow-origin
 
 # The bot must NOT be reachable from outside
-curl -m 5 http://api.artificialcat.example:3100/status   # must fail or time out
+curl -m 5 http://api.artificialcat.meme:3100/status   # must fail or time out
 ```
 
 A 403 on the CORS check means the origin is missing from `CORS_ORIGINS` — the
@@ -302,7 +296,7 @@ normaliser reads `json.data ?? json.rewards ?? json` and throws on anything that
 is not an array, so a missing `data` renders as "Unexpected rewards payload
 shape" against a perfectly healthy API.
 
-Then point the site at it (`VITE_API_BASE_URL=https://api.artificialcat.example`,
+Then point the site at it (`VITE_API_BASE_URL=https://api.artificialcat.meme`,
 `VITE_USE_MOCK=false`) and redeploy the frontend.
 
 ## 11. Dry run
@@ -411,8 +405,8 @@ pm2 restart artificialcat-api artificialcat-bot --update-env
 # process, but BOTH processes connect to MongoDB before they listen — on a
 # hosted URI that is a remote round trip. A curl on the next line gets a 502
 # from nginx, or an empty body, from an API that is starting perfectly normally.
-until curl -sf https://api.artificialcat.example/health >/dev/null; do sleep 1; done
-curl -s https://api.artificialcat.example/stats | head -c 200
+until curl -sf https://api.artificialcat.meme/health >/dev/null; do sleep 1; done
+curl -s https://api.artificialcat.meme/stats | head -c 200
 ```
 
 ## Operational watch-list
