@@ -24,7 +24,7 @@ function parseClusters(value) {
       .map((g) => g.filter((a) => typeof a === 'string' && a.trim()).map((a) => a.trim()))
       .filter((g) => g.length > 0);
   } catch (_err) {
-    console.warn('[artificialneko] CLUSTERS is not valid JSON — ignoring');
+    console.warn('[artificialcat] CLUSTERS is not valid JSON — ignoring');
     return [];
   }
 }
@@ -115,17 +115,17 @@ const explorerApi = (process.env.EXPLORER_API || 'https://robinhoodchain.blocksc
 const config = {
   port: num(process.env.PORT, 3000),
 
-  // NEKO's contract address. Blank until the token is launched — every stat
+  // CAT's contract address. Blank until the token is launched — every stat
   // then resolves to null, which the site renders as "—" rather than a zero.
   tokenAddress: lowerOrNull(process.env.TOKEN_ADDRESS),
-  // The site's ticker is $NEKO (SITE.ticker in its config/site.js).
-  tokenSymbol: process.env.TOKEN_SYMBOL || 'NEKO',
+  // The site's ticker is $CAT (SITE.ticker in its config/site.js).
+  tokenSymbol: process.env.TOKEN_SYMBOL || 'CAT',
   // Referenced in several places as `config.quoteSymbol || 'NVDA'` but never
   // actually defined, so every one of those fell through to the literal. Only
   // the burns feed, which had no fallback, exposed it - as a null where the
   // site expects a ticker.
   quoteSymbol: process.env.QUOTE_SYMBOL || 'NVDA',
-  tokenName: process.env.TOKEN_NAME || 'Artificial Neko',
+  tokenName: process.env.TOKEN_NAME || 'Artificial Cat',
   // Whole-token total supply, used ONLY to compute the pre-graduation market
   // cap when Blockscout (the normal source of supply + decimals) is
   // unreachable. Blank = no fallback. Pons V2 launches mint 1,000,000,000.
@@ -141,7 +141,7 @@ const config = {
   // request per visitor per 30s.
   // A DexScreener pair below this much liquidity is ignored. Any token can have
   // a dust pool nobody trades, and DexScreener quotes a price from it as
-  // readily as from a real market - NEKO's $3.32 NEKO/ETH pair put the site
+  // readily as from a real market - the sibling NEKO launch's $3.32 NEKO/ETH pair put the site
   // at $6.35K against a true $34.13K.
   // The pons chart endpoint answers in about 7 seconds for a 1.8 KB payload -
   // slow, but not broken. The default fetch timeout is tuned for a browser
@@ -195,7 +195,7 @@ const config = {
   holdersTtlMs: num(process.env.HOLDERS_TTL_MS, 120_000),
 
   // ── Pons rewards ("Total NVDA Rewarded") ───────────────────────────────────
-  // NEKO's 2% creator tax accrues in NVDA (tokenized SpaceX stock) and routes to a
+  // CAT's 2% creator tax accrues in NVDA (tokenized NVIDIA stock) and routes to a
   // per-token fee distributor that pushes payouts to holder wallets. The
   // cumulative "paid to holders" total comes from Pons's public API — the same
   // source their token page renders (see src/services/rewards.js).
@@ -337,7 +337,7 @@ const config = {
 
   // ── Bot: storage and control ───────────────────────────────────────────────
   mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017',
-  mongoDb: process.env.MONGODB_DB || 'artificialneko',
+  mongoDb: process.env.MONGODB_DB || 'artificialcat',
   apiKey: process.env.API_KEY || null,
   botPort: num(process.env.BOT_PORT, 3100),
 };

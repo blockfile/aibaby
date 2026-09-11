@@ -2,7 +2,7 @@
 
 // Buy the REWARD token with claimed quote.
 //
-// This is what makes Artificial Neko different from the lineage it grew
+// This is what makes Artificial Cat different from the lineage it grew
 // from. There, the asset claimed from the escrow was the same asset paid to
 // holders, so a cycle claimed and airdropped without ever touching a DEX. Here
 // fees arrive as NVDA and holders are paid in Artificial Inu, so every cycle

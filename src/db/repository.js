@@ -26,7 +26,7 @@ async function createCycle({ dryRun }) {
     finished_at: null,
     phase: null,
     // Quote amounts are NVDA, the launch's quote asset — there is no ETH in
-    // this flow, so no *_eth columns. tokens_burned is NEKO: the only
+    // this flow, so no *_eth columns. tokens_burned is CAT: the only
     // thing the bot ever buys, and it is destroyed in the same cycle.
     quote_claimed: null,
     quote_distributed: null,
@@ -248,7 +248,7 @@ async function getDistributedTotal(rewardToken) {
  *
  * Same source as getBurnTotal - a completed buyback step carrying a real
  * transaction hash - but as individual events rather than a sum, so the site
- * can show "874,649 NEKO destroyed" beside a link to the burn itself. The
+ * can show "874,649 CAT destroyed" beside a link to the burn itself. The
  * totals alone could tell a visitor how much had been burned but never when,
  * or let them verify any of it.
  */
@@ -354,7 +354,7 @@ async function getDistributionState() {
  * Carried forward so a failed burn is retried on the next cycle instead of
  * sitting in the wallet forever. Tracked as a NUMBER OF TOKENS THE BOT BOUGHT,
  * never as "whatever the wallet holds": the signing wallet is also the dev
- * wallet and may hold NEKO personally, which must never be burned.
+ * wallet and may hold CAT personally, which must never be burned.
  */
 async function setPendingBurn(raw) {
   const db = getDb();

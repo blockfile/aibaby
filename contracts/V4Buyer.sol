@@ -5,7 +5,7 @@ pragma solidity ^0.8.24;
  * Buy a token from a Uniswap v4 pool, talking to the PoolManager directly.
  *
  * The UniversalRouter cannot do this for a pons pool whose quote asset is an
- * ERC-20: NVDA -> NEKO reverts with empty data at every size, in both swap
+ * ERC-20: NVDA -> CAT reverts with empty data at every size, in both swap
  * directions, under every action ordering, with the wallet funded and Permit2
  * fully approved. The same router handles NVDA -> ETH on a hookless pool and
  * ETH -> memecoin on the same pons hook, so the failure is specific to

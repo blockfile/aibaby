@@ -27,7 +27,7 @@ const { getCreatorFees } = require('../services/creatorfees');
 const router = express.Router();
 
 /**
- * Pure: what the burned NEKO is worth at the CURRENT price.
+ * Pure: what the burned CAT is worth at the CURRENT price.
  *
  * Deliberately distinct from `burnQuoteSpent`, which is what the buybacks
  * actually cost in NVDA. The two answer different questions and drift apart as
@@ -118,7 +118,7 @@ function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, cu
   const holders = token.holders ?? null;
   return {
     marketCap: market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token),
-    // The Artificial Neko site reads these two first and falls back to the
+    // The Artificial Cat site reads these two first and falls back to the
     // camelCase names; serving both means a frontend rename cannot break it.
     market_cap_usd: market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token),
     total_distributed_usd: rewardedUsd(rewards, rewardPrice),
@@ -134,7 +134,7 @@ function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, cu
     // (`raw.<asset>Rewarded ?? raw.<asset>_rewarded ?? raw.rewarded`).
     nvdaRewarded: totalRewardedUsd,
     rewarded: totalRewardedUsd,
-    // The Artificial Neko site labels its card "TOTAL $NVDA DISTRIBUTED" and
+    // The Artificial Cat site labels its card "TOTAL $NVDA DISTRIBUTED" and
     // resolves it from `rewardDistributed` FIRST, falling back to
     // `totalDistributed` — which is USD. Without this pair it put dollars under
     // an NVDA label, overstating the token count by NVDA's price. Tokens here,
@@ -146,7 +146,7 @@ function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, cu
     // NVDA token amount that `totalRewarded` carries.
     totalDistributed: totalRewardedUsd,
     // ── Buyback + burn ──────────────────────────────────────────────────────
-    // NEKO tokens destroyed. The headline number for the burn tile.
+    // CAT tokens destroyed. The headline number for the burn tile.
     totalBurned: burns.totalBurned ?? null,
     // What those buybacks cost, in NVDA — what was actually spent.
     burnQuoteSpent: burns.burnQuoteSpent ?? null,
@@ -206,28 +206,28 @@ router.get('/stats', async (req, res, next) => {
     const creatorFees = feesResult.status === 'fulfilled' ? feesResult.value : {};
 
     if (marketResult.status === 'rejected') {
-      console.warn('[artificialneko] market data unavailable:', marketResult.reason?.message);
+      console.warn('[artificialcat] market data unavailable:', marketResult.reason?.message);
     }
     if (tokenResult.status === 'rejected') {
-      console.warn('[artificialneko] holder count unavailable:', tokenResult.reason?.message);
+      console.warn('[artificialcat] holder count unavailable:', tokenResult.reason?.message);
     }
     if (rewardsResult.status === 'rejected') {
-      console.warn('[artificialneko] rewards unavailable:', rewardsResult.reason?.message);
+      console.warn('[artificialcat] rewards unavailable:', rewardsResult.reason?.message);
     }
     if (burnsResult.status === 'rejected') {
-      console.warn('[artificialneko] burn totals unavailable:', burnsResult.reason?.message);
+      console.warn('[artificialcat] burn totals unavailable:', burnsResult.reason?.message);
     }
     if (curveResult.status === 'rejected') {
-      console.warn('[artificialneko] curve price unavailable:', curveResult.reason?.message);
+      console.warn('[artificialcat] curve price unavailable:', curveResult.reason?.message);
     }
     if (quoteResult.status === 'rejected') {
-      console.warn('[artificialneko] NVDA price unavailable:', quoteResult.reason?.message);
+      console.warn('[artificialcat] NVDA price unavailable:', quoteResult.reason?.message);
     }
     if (rewardPriceResult.status === 'rejected') {
-      console.warn('[artificialneko] AI price unavailable:', rewardPriceResult.reason?.message);
+      console.warn('[artificialcat] AI price unavailable:', rewardPriceResult.reason?.message);
     }
     if (feesResult.status === 'rejected') {
-      console.warn('[artificialneko] creator-fee total unavailable:', feesResult.reason?.message);
+      console.warn('[artificialcat] creator-fee total unavailable:', feesResult.reason?.message);
     }
 
     res.json(

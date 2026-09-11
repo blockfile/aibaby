@@ -15,7 +15,7 @@ test('pre-launch, the rewarded total is null rather than zero', () => {
 test('the total sums real payouts and ignores simulated ones', async () => {
   const mongod = await MongoMemoryServer.create();
   process.env.MONGODB_URI = mongod.getUri();
-  process.env.MONGODB_DB = 'artificialneko_rewards_test';
+  process.env.MONGODB_DB = 'artificialcat_rewards_test';
   process.env.TOKEN_ADDRESS = '0x50d0d0da00ffd195d2d1d2448617ad039855ad2b';
   for (const m of ['./../config', '../db/index', '../db/repository', './rewards']) {
     delete require.cache[require.resolve(m)];

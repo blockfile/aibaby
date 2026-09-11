@@ -1,13 +1,19 @@
-# Deploying artificialneko to Ubuntu 24.04
+# Deploying artificialcat to Ubuntu 24.04
 
-Site: **https://artificialneko.com** · API: **https://api.artificialneko.com**
+Site: **https://artificialcat.example** · API: **https://api.artificialcat.example**
 
-Two PM2 processes over one MongoDB, from `/var/www/artificialneko`:
+> **No domain yet.** `artificialcat.example` is a placeholder — `.example` is
+> reserved and can never resolve, so a step run before the substitution fails
+> loudly instead of half-working against someone else's host. Once the domain
+> is bought, replace it in `.env` (`CORS_ORIGINS`) and in this file:
+> `sed -i 's/artificialcat\.example/yourdomain.com/g' DEPLOY.md .env`
+
+Two PM2 processes over one MongoDB, from `/var/www/artificialcat`:
 
 | Process | Port | Reachable from |
 | --- | --- | --- |
-| `artificialneko-api` (`server.js`) | 3000 | the internet, via nginx → `api.artificialneko.com` |
-| `artificialneko-bot` (`bot.js`) | 3100 | **localhost only** — never proxied |
+| `artificialcat-api` (`server.js`) | 3000 | the internet, via nginx → `api.artificialcat.example` |
+| `artificialcat-bot` (`bot.js`) | 3100 | **localhost only** — never proxied |
 
 The bot holds the wallet key and `POST /run` pays real money out, so its port
 stays off the internet. Do not collapse the two back into one process.
@@ -24,8 +30,8 @@ transfer graph. The **disperser is per-project**: it is the recorded sender of
 every payout, so sharing one links the projects on any bubblemap. Deploy one at
 go-live with `node scripts/deploy-disperser-v2.js --confirm`.
 
-**Before you start:** point a DNS `A` record for `api.artificialneko.com` at the
-server's public IP and let it propagate (`dig +short api.artificialneko.com`). Certbot
+**Before you start:** point a DNS `A` record for `api.artificialcat.example` at the
+server's public IP and let it propagate (`dig +short api.artificialcat.example`). Certbot
 cannot issue a certificate until it resolves.
 
 ## 1. Base prep
@@ -81,7 +87,7 @@ Skip straight to the next step and put the connection string in `.env` later:
 
 ```ini
 MONGODB_URI=mongodb+srv://user:pass@cluster.xxxxx.mongodb.net/?retryWrites=true&w=majority
-MONGODB_DB=artificialneko
+MONGODB_DB=artificialcat
 ```
 
 **Allowlist the server's IP in the provider's network settings.** This is the
@@ -107,9 +113,9 @@ which is what you want.
 ## 5. Clone into /var/www
 
 ```bash
-mkdir -p /var/www/artificialneko
-cd /var/www/artificialneko
-git clone https://github.com/blockfile/artificialneko.git .
+mkdir -p /var/www/artificialcat
+cd /var/www/artificialcat
+git clone https://github.com/blockfile/cat.git .
 npm ci --omit=dev
 ```
 
@@ -120,7 +126,7 @@ package-lock.json` — which looks like a broken repo and is not.
 ## 6. Configure
 
 ```bash
-cd /var/www/artificialneko
+cd /var/www/artificialcat
 cp .env.example .env
 nano .env
 chmod 600 .env
@@ -132,7 +138,7 @@ Values for this deployment:
 PORT=3000
 BOT_PORT=3100
 
-TOKEN_ADDRESS=                 # blank until NEKO launches
+TOKEN_ADDRESS=                 # blank until CAT launches
 WALLET_PRIVATE_KEY=            # the creator wallet — set at go-live, not now
 DRY_RUN=true
 
@@ -172,9 +178,9 @@ POLL_SCHEDULE=* * * * *
 TRIGGER_SCHEDULE=0 * * * *
 
 MONGODB_URI=                   # from step 4
-MONGODB_DB=artificialneko
+MONGODB_DB=artificialcat
 API_KEY=                       # any long random string; guards the bot's /run
-CORS_ORIGINS=https://artificialneko.com,https://www.artificialneko.com
+CORS_ORIGINS=https://artificialcat.example,https://www.artificialcat.example
 ```
 
 Generate the API key rather than inventing one:
@@ -193,7 +199,7 @@ run against a fake, but it is easier not to paste one.
 The repo ships `ecosystem.config.js`, so both processes start together.
 
 ```bash
-cd /var/www/artificialneko
+cd /var/www/artificialcat
 pm2 start ecosystem.config.js
 pm2 save
 pm2 status
@@ -223,14 +229,14 @@ apt install -y nginx
 This proxies **only** port 3000. The bot's 3100 is deliberately absent.
 
 ```bash
-tee /etc/nginx/sites-available/api.artificialneko.com > /dev/null <<'NGINX'
+tee /etc/nginx/sites-available/api.artificialcat.example > /dev/null <<'NGINX'
 server {
     listen 80;
     listen [::]:80;
-    server_name api.artificialneko.com;
+    server_name api.artificialcat.example;
 
-    access_log /var/log/nginx/artificialneko.access.log;
-    error_log  /var/log/nginx/artificialneko.error.log;
+    access_log /var/log/nginx/artificialcat.access.log;
+    error_log  /var/log/nginx/artificialcat.error.log;
 
     client_max_body_size 1m;
 
@@ -248,24 +254,24 @@ server {
 }
 NGINX
 
-ln -s /etc/nginx/sites-available/api.artificialneko.com /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/api.artificialcat.example /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
-curl http://api.artificialneko.com/health
+curl http://api.artificialcat.example/health
 ```
 
 ## 9. Certbot / HTTPS
 
-The site is HTTPS, so the API must be — a browser on `https://artificialneko.com`
-refuses to fetch `http://api.artificialneko.com` as mixed content.
+The site is HTTPS, so the API must be — a browser on `https://artificialcat.example`
+refuses to fetch `http://api.artificialcat.example` as mixed content.
 
 ```bash
 snap install core && snap refresh core
 snap install --classic certbot
 ln -sf /snap/bin/certbot /usr/bin/certbot
 
-certbot --nginx -d api.artificialneko.com --redirect \
+certbot --nginx -d api.artificialcat.example --redirect \
   -m you@example.com --agree-tos --no-eff-email
 
 certbot renew --dry-run
@@ -275,17 +281,17 @@ systemctl list-timers | grep certbot
 ## 10. Verify
 
 ```bash
-curl https://api.artificialneko.com/health
-curl https://api.artificialneko.com/token
-curl https://api.artificialneko.com/stats
-curl "https://api.artificialneko.com/rewards?limit=5"
+curl https://api.artificialcat.example/health
+curl https://api.artificialcat.example/token
+curl https://api.artificialcat.example/stats
+curl "https://api.artificialcat.example/rewards?limit=5"
 
 # CORS — must echo the site's origin back
-curl -s -H "Origin: https://artificialneko.com" -D- -o /dev/null \
-  https://api.artificialneko.com/stats | grep -i access-control-allow-origin
+curl -s -H "Origin: https://artificialcat.example" -D- -o /dev/null \
+  https://api.artificialcat.example/stats | grep -i access-control-allow-origin
 
 # The bot must NOT be reachable from outside
-curl -m 5 http://api.artificialneko.com:3100/status   # must fail or time out
+curl -m 5 http://api.artificialcat.example:3100/status   # must fail or time out
 ```
 
 A 403 on the CORS check means the origin is missing from `CORS_ORIGINS` — the
@@ -296,7 +302,7 @@ normaliser reads `json.data ?? json.rewards ?? json` and throws on anything that
 is not an array, so a missing `data` renders as "Unexpected rewards payload
 shape" against a perfectly healthy API.
 
-Then point the site at it (`VITE_API_BASE_URL=https://api.artificialneko.com`,
+Then point the site at it (`VITE_API_BASE_URL=https://api.artificialcat.example`,
 `VITE_USE_MOCK=false`) and redeploy the frontend.
 
 ## 11. Dry run
@@ -308,7 +314,7 @@ against an in-memory fee vault. No key, no RPC and no funds are involved.
 refuses immediately:
 
 ```json
-{"status":"failed","error":"TOKEN_ADDRESS (NEKO) is required"}
+{"status":"failed","error":"TOKEN_ADDRESS (CAT) is required"}
 ```
 
 That is correct — it will not pretend to work on a token that does not exist.
@@ -316,12 +322,12 @@ To rehearse the flow before launch, point it at any address: DRY_RUN simulates
 the launch record too, so it need not be a real token.
 
 ```bash
-cd /var/www/artificialneko
+cd /var/www/artificialcat
 export API_KEY=$(grep -E '^API_KEY=' .env | cut -d= -f2-)
 
 # a placeholder, purely to exercise the cycle
 sed -i 's/^TOKEN_ADDRESS=.*/TOKEN_ADDRESS=0x0000000000000000000000000000000000000001/' .env
-pm2 restart artificialneko-bot --update-env
+pm2 restart artificialcat-bot --update-env
 
 # WAIT for the port. `pm2 restart` returns as soon as it signals the process,
 # but the bot connects to MongoDB BEFORE it listens on 3100 — on a hosted URI
@@ -333,7 +339,7 @@ curl -H "x-api-key: $API_KEY" -X POST http://127.0.0.1:3100/run
 ```
 
 A rehearsed cycle claims NVDA, sells a slice for gas, airdrops NVDA to holders,
-then buys NEKO with the burn share and destroys it. The `reward-swap` step is
+then buys CAT with the burn share and destroys it. The `reward-swap` step is
 recorded but does nothing while the reward token IS the quote token: there is
 nothing to swap, so it reports the claim straight through with no signature.
 A `reward-swap` with a transaction hash means `REWARD_TOKEN_ADDRESS` points at
@@ -348,7 +354,7 @@ Put the blank back when you are done:
 
 ```bash
 sed -i 's/^TOKEN_ADDRESS=.*/TOKEN_ADDRESS=/' .env
-pm2 restart artificialneko-bot --update-env
+pm2 restart artificialcat-bot --update-env
 ```
 
 ## 12. Going live (after launch)
@@ -359,7 +365,7 @@ the address you think it does before the key for that address is in a file on a
 server:
 
 ```bash
-cd /var/www/artificialneko
+cd /var/www/artificialcat
 node scripts/claimable.js 0xYOUR_TOKEN
 ```
 
@@ -379,12 +385,12 @@ Fund the wallet with **ETH for gas** — the bot's income is NVDA and cannot pay
 for its own first transaction. Then:
 
 ```bash
-pm2 restart artificialneko-bot --update-env   # still DRY_RUN=true
+pm2 restart artificialcat-bot --update-env   # still DRY_RUN=true
 curl -H "x-api-key: $API_KEY" -X POST http://127.0.0.1:3100/run
 # read the cycle, then:
 nano .env      # DRY_RUN=false
-pm2 restart artificialneko-bot --update-env
-pm2 logs artificialneko-bot
+pm2 restart artificialcat-bot --update-env
+pm2 logs artificialcat-bot
 ```
 
 Stop the schedule at any time without touching the public API:
@@ -396,17 +402,17 @@ curl -H "x-api-key: $API_KEY" -X POST http://127.0.0.1:3100/pause
 ## Redeploying
 
 ```bash
-cd /var/www/artificialneko
+cd /var/www/artificialcat
 git pull
 npm ci --omit=dev
-pm2 restart artificialneko-api artificialneko-bot --update-env
+pm2 restart artificialcat-api artificialcat-bot --update-env
 
 # WAIT before checking anything. `pm2 restart` returns as soon as it signals the
 # process, but BOTH processes connect to MongoDB before they listen — on a
 # hosted URI that is a remote round trip. A curl on the next line gets a 502
 # from nginx, or an empty body, from an API that is starting perfectly normally.
-until curl -sf https://api.artificialneko.com/health >/dev/null; do sleep 1; done
-curl -s https://api.artificialneko.com/stats | head -c 200
+until curl -sf https://api.artificialcat.example/health >/dev/null; do sleep 1; done
+curl -s https://api.artificialcat.example/stats | head -c 200
 ```
 
 ## Operational watch-list
@@ -422,7 +428,7 @@ curl -s https://api.artificialneko.com/stats | head -c 200
 - **The `reward-swap` line.** It is the leg with no production history. A cycle
   that claims and then buys nothing pays nobody, so it is the first thing to
   read in a quiet cycle.
-- **`MIN_HOLD`.** 100,000 NEKO, matching what the site advertises. Lowering it
+- **`MIN_HOLD`.** 100,000 CAT, matching what the site advertises. Lowering it
   toward 1 pays dust to nearly every wallet and multiplies per-cycle gas.
 - **A quiet twenty minutes is not a symptom.** Distributions land on
   `TRIGGER_SCHEDULE` (default hourly, on the hour), not whenever the tank fills.

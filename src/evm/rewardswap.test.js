@@ -7,7 +7,7 @@ const assert = require('node:assert');
 const config = require('../config');
 
 test('when the reward IS the quote asset, there is nothing to buy', async () => {
-  // Artificial Neko pays holders NVDA, the same asset creator fees arrive in.
+  // Artificial Cat pays holders NVDA, the same asset creator fees arrive in.
   // Routing that through a NVDA/NVDA swap would be meaningless and would cost
   // holders a pool fee and slippage for nothing. The buy leg turns itself off.
   assert.strictEqual(

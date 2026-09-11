@@ -4,7 +4,7 @@
 //
 // The UniversalRouter cannot swap INTO a pons pool whose quote asset is an
 // ERC-20. Verified against the live chain, with the wallet funded and Permit2
-// fully approved: NVDA -> NEKO reverts with empty data at every size, in
+// fully approved: NVDA -> CAT reverts with empty data at every size, in
 // both directions, under every action ordering, while the same router happily
 // does NVDA -> ETH on a hookless pool and ETH -> memecoin on the same pons
 // hook. The V4Quoter executes the failing swap, hook included, and returns a

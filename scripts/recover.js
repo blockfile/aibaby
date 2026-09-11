@@ -101,7 +101,7 @@ async function main() {
         detail: buyback,
       });
       log(buyback.burned
-        ? `burned ${buyback.tokensBought} ${config.tokenSymbol || 'NEKO'} for ${burn} NVDA`
+        ? `burned ${buyback.tokensBought} ${config.tokenSymbol || 'CAT'} for ${burn} NVDA`
         : `buyback FAILED (${buyback.error}) — the NVDA stays in the wallet`);
     }
 

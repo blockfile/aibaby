@@ -488,5 +488,5 @@ test('token mode is NOT treated as interval mode', () => {
 
 test('adding the mode does not change THIS deployment, which gates in USD', () => {
   const config = require('../config');
-  assert.strictEqual(config.triggerMode, 'accumulation', 'neko is live on the USD gate');
+  assert.strictEqual(config.triggerMode, 'accumulation', 'the default is the USD gate');
 });

@@ -1,6 +1,6 @@
 'use strict';
 
-// NVDA/USD — the price of the tokenized-SpaceX asset that NEKO is paired with
+// NVDA/USD — the price of the tokenized-NVIDIA asset that CAT is paired with
 // and that holder rewards are paid in. Two consumers share this one cached
 // read: the bonding-curve market cap (curve price is in NVDA) and the USD
 // figure for rewards paid out. NVDA has deep USDG pools on Robinhood Chain, so

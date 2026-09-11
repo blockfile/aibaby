@@ -1,6 +1,6 @@
 'use strict';
 
-// Market cap for NEKO, from DexScreener's public API (no key required).
+// Market cap for CAT, from DexScreener's public API (no key required).
 //
 // Returns nulls rather than throwing when the token isn't listed yet or the API
 // is unreachable, so /stats never breaks — the site hides a tile whose value is
@@ -36,7 +36,7 @@ function parsePairs(data, token, chainId) {
     .sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
 
   // Ignore pairs too thin to price anything. A token can have a dust pool
-  // nobody trades - NEKO had a NEKO/ETH pair holding $3.32 - and
+  // nobody trades - the sibling NEKO launch had a NEKO/ETH pair holding $3.32 - and
   // DexScreener will happily quote a price and a market cap from it. That put
   // the site at $6.35K while the real figure, on the bonding curve where the
   // token actually trades, was $34.13K.
@@ -46,13 +46,13 @@ function parsePairs(data, token, chainId) {
   // three-dollar pool is worse than no number, because it looks like one.
   const deepEnough = (x) => (toNumber(x.liquidity && x.liquidity.usd) ?? 0) >= config.minPairLiquidityUsd;
 
-  // Depth alone picks the WRONG pool. Live, DexScreener listed 16 NEKO pairs and
+  // Depth alone picks the WRONG pool. Live, on the sibling NEKO launch, DexScreener listed 16 NEKO pairs and
   // the deepest was a NEKO/ETH pool with $35.8M of liquidity quoting $3.22 a
   // token — 4,800x the real price — which put the site's market cap at $3.2
   // BILLION against a true ~$676K. Anyone can open a pool with any ratio, and a
   // deep one is not thereby the market.
   //
-  // The launch settles it: pons priced NEKO in NVDA, so the NEKO/NVDA pool IS
+  // The launch settles it: pons priced CAT in NVDA, so the CAT/NVDA pool IS
   // where it trades and every other pair is a side venue. Preference, not a
   // filter — before that pair is indexed a deep pool is still better than
   // nothing, and the liquidity floor applies either way.

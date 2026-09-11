@@ -3,7 +3,7 @@
 // The V2FeeEscrow is where BOTH launch phases deliver the creator's share.
 //
 // For this launch that share is NVDA, not native ETH: pons pays creator fees in
-// whatever the launch is priced in, and NEKO is priced in NVDA. So every
+// whatever the launch is priced in, and CAT is priced in NVDA. So every
 // read and write here uses the TOKEN path — `balanceOfToken` / `claimToken` —
 // and the native `balanceOf` / `claim` pair is deliberately never called.
 // Calling the native one would not error; it would quietly return zero, the

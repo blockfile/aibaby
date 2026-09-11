@@ -11,7 +11,7 @@ let repo;
 test.before(async () => {
   mongod = await MongoMemoryServer.create();
   process.env.MONGODB_URI = mongod.getUri();
-  process.env.MONGODB_DB = 'artificialneko_test';
+  process.env.MONGODB_DB = 'artificialcat_test';
   process.env.DRY_RUN = 'true';
   delete require.cache[require.resolve('../config')];
   db = require('./index');

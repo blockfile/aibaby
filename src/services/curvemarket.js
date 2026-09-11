@@ -1,22 +1,22 @@
 'use strict';
 
-// Pre-graduation NEKO price, computed from the Pons bonding curve.
+// Pre-graduation CAT price, computed from the Pons bonding curve.
 //
-// Until NEKO graduates off the Pons V2 bonding curve there is no Uniswap pool,
+// Until CAT graduates off the Pons V2 bonding curve there is no Uniswap pool,
 // so DexScreener has nothing to say about it. But the curve itself trades all
 // day, and Pons's chart API (same host as the rewards distributor API) reports
-// the curve price denominated in NVDA — while NVDA, the tokenized-SpaceX quote
+// the curve price denominated in NVDA — while NVDA, the tokenized-NVIDIA quote
 // asset, IS listed on DexScreener with deep pools. Multiplying the two gives a
-// real USD price for NEKO today:
+// real USD price for CAT today:
 //
 //   GET {ponsApi}/api/pons-v2-market/{token}/chart?range=1d
-//     -> { points: [{ t, price, ... }] }        price = NVDA per NEKO
+//     -> { points: [{ t, price, ... }] }        price = NVDA per CAT
 //   GET dexscreener /latest/dex/tokens/{NVDA}   -> NVDA price in USD
 //
 //   priceUsd = latest curve price × NVDA priceUsd
 //
 // /stats uses this as a FALLBACK: once the token graduates, the DexScreener
-// pair for NEKO itself takes over (see routes/stats.js merge order) and this
+// pair for CAT itself takes over (see routes/stats.js merge order) and this
 // service quietly stops mattering. No trades yet or an unlisted quote asset
 // degrade to null, never 0; malformed responses throw so the stale-while-error
 // cache keeps the last good value.
@@ -29,7 +29,7 @@ const { getMarketData } = require('./marketdata');
 
 const EMPTY = { priceUsd: null };
 
-/** Pure: latest curve price (NVDA per NEKO) out of a Pons chart payload, or null. */
+/** Pure: latest curve price (NVDA per CAT) out of a Pons chart payload, or null. */
 function parseCurvePrice(data) {
   if (!data || typeof data !== 'object') {
     throw new Error(`malformed chart response: ${String(data).slice(0, 80)}`);

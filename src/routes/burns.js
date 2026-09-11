@@ -35,7 +35,7 @@ router.get('/burns', async (req, res) => {
   try {
     res.json(presentPage(await getFeedPage(`${q.cursor || ''}|${q.limit}`, q.cursor, q.limit)));
   } catch (err) {
-    console.warn('[artificialneko] burns feed unavailable:', err.message);
+    console.warn('[artificialcat] burns feed unavailable:', err.message);
     res.status(502).json({ error: 'burns feed unavailable' });
   }
 });

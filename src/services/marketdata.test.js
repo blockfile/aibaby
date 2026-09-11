@@ -47,7 +47,7 @@ test('an unlisted token (no pairs) yields nulls, not zeros', () => {
 });
 
 test('a dust pool is ignored rather than used to price the token', () => {
-  // NEKO had a NEKO/ETH pair holding $3.32. DexScreener quoted a price and
+  // The sibling NEKO launch had a NEKO/ETH pair holding $3.32. DexScreener quoted a price and
   // a market cap from it as readily as from a real market, and the site showed
   // $6.35K while the token actually traded at $34.13K on its bonding curve.
   // Returning nothing lets the caller fall back to the curve price, which is

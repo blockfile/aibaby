@@ -1,19 +1,19 @@
-# artificialneko
+# artificialcat
 
-**Creator-fee reward bot and stats API for [artificialneko.com](https://artificialneko.com).**
+**Creator-fee reward bot and stats API for [artificialcat.example](https://artificialcat.example).**
 
-NEKO launches on the Pons V2 launchpad **paired with NVDA** (tokenized
-SpaceX stock). Because pons pays creator fees in whatever a launch is priced in,
+CAT launches on the Pons V2 launchpad **paired with NVDA** (tokenized
+NVIDIA stock). Because pons pays creator fees in whatever a launch is priced in,
 those fees accrue **as NVDA** — never as ETH. This repo claims them, airdrops
-nearly all of them pro-rata to NEKO holders, keeps back only what it costs to
+nearly all of them pro-rata to CAT holders, keeps back only what it costs to
 send them, and reports what it did to the site.
 
 ```
-NEKO trades  →  creator fees accrue on-chain, denominated in NVDA
+CAT trades  →  creator fees accrue on-chain, denominated in NVDA
       ↓  sweep              push pending fees into the pons fee escrow
       ↓  claimToken(NVDA)   withdraw the escrow → the bot's wallet
       ├─ 10% → sell for native ETH, so the bot can pay its own gas
-      ├─ 90% → airdrop NVDA pro-rata to NEKO holders
+      ├─ 90% → airdrop NVDA pro-rata to CAT holders
       ├─  0% → buyback + burn: BUILT, but not funded (BURN_PCT=0)
       └─  0% → dev cut: whatever the other three leave (none at 90/0/10)
 ```
@@ -43,7 +43,7 @@ The public API must never hold a signing key, so the bot is a separate process:
 
 | Process | Runs | Holds the wallet key | Exposed |
 | --- | --- | --- | --- |
-| `server.js` (`npm start`) | the site's API | **no** | nginx → `api.artificialneko.com` |
+| `server.js` (`npm start`) | the site's API | **no** | nginx → `api.artificialcat.example` |
 | `bot.js` (`npm run bot`) | scheduler + cycle | **yes** | `127.0.0.1` only |
 
 They share one MongoDB: the bot writes payouts, the API reads them. A compromise
@@ -246,7 +246,7 @@ DexScreener has nothing to say.
 
 | Field | Is |
 | --- | --- |
-| `totalBurned` | NEKO tokens destroyed — the headline number |
+| `totalBurned` | CAT tokens destroyed — the headline number |
 | `burnQuoteSpent` | what those buybacks **cost**, in NVDA |
 | `totalBurnedUsd` | what the destroyed tokens are **worth today** |
 | `burnedPctOfSupply` | share of the original mint that has been burned |
@@ -301,19 +301,19 @@ Everything is documented in `.env.example`. The ones worth knowing first:
 
 | Env | Default | Meaning |
 | --- | --- | --- |
-| `WALLET_PRIVATE_KEY` | — | must be NEKO's `creatorFeeRecipient`; `bot.js` only |
+| `WALLET_PRIVATE_KEY` | — | must be CAT's `creatorFeeRecipient`; `bot.js` only |
 | `TOKEN_ADDRESS` | — | blank until launch → every stat is null |
 | `QUOTE_TOKEN_ADDRESS` | NVDA | the quote asset **and** the reward asset — one address, both roles |
 | `CLAIM_EVERY_USD` | `100` | fire once the accrued NVDA is worth this |
 | `POLL_SCHEDULE` | `* * * * *` | how often the chain is read and the gauge written; never pays |
 | `TRIGGER_SCHEDULE` | `0 * * * *` | when a distribution may happen — `*/30 * * * *` for every half hour |
 | `REWARD_PCT` | `90` | share airdropped to holders |
-| `BURN_PCT` | `0` | share used to buy NEKO and burn it — **off by default here** |
+| `BURN_PCT` | `0` | share used to buy CAT and burn it — **off by default here** |
 | `GAS_PCT` | `10` | share sold for ETH to fund the bot's own gas |
 | `GAS_CEILING_ETH` | `0` | stop converting above this ETH balance (0 = never) |
 | `SLIPPAGE_PCT` | `5` | tolerance on the buyback swap only |
 | `DEV_PAYOUT_ADDRESS` | — | cold address the dev cut is forwarded to; blank = it stays in the bot wallet |
-| `MIN_HOLD` | `100000` | minimum NEKO balance to qualify |
+| `MIN_HOLD` | `100000` | minimum CAT balance to qualify |
 | `REWARD_CAP_PCT` | `0` | per-wallet weight cap, % of supply (0 = pure pro-rata) |
 | `DISPERSE_ADDRESS` | — | batch-transfer contract; blank → one transfer per recipient |
 | `GAS_RESERVE_ETH` | `0.01` | below this the cycle refuses to start |
@@ -328,7 +328,7 @@ The airdrop needs every holder and balance. Two sources, in order:
 | **Chain index** (`HOLDER_INDEX_FROM_BLOCK`) | Transfer logs replayed on your own RPC |
 | **Explorer** (fallback) | Blockscout, 50 holders a page |
 
-The index is preferred for speed — NEKO's whole history is 33,412 transfers in
+The index is preferred for speed — CAT's whole history is 33,412 transfers in
 20s, and each later cycle only reads new blocks, about 2.7s — but the reason it
 exists is that it can be **checked**. Balances must sum to `totalSupply()`
 before a single NVDA moves; if they do not, the index refuses its own answer and
@@ -390,7 +390,7 @@ a tokenized equity.
 
 ## Going live
 
-1. Launch NEKO on pons v2 paired with NVDA, **connected as the dev wallet**.
+1. Launch CAT on pons v2 paired with NVDA, **connected as the dev wallet**.
    Leave "Creator wallet" blank so it defaults to that connected wallet, and
    leave the holder-fee-sharing toggle **off**. The confirm modal must read
    "Creator fees: Paid to the creator wallet" and show the dev wallet's address.
@@ -403,10 +403,10 @@ a tokenized equity.
 ## Deploying
 
 See [`DEPLOY.md`](DEPLOY.md) — Ubuntu 24.04, Node 22, MongoDB, two PM2
-processes, nginx and Certbot for `api.artificialneko.com`.
+processes, nginx and Certbot for `api.artificialcat.example`.
 
 ## Design
 
 The spec is in
-[`docs/superpowers/specs/2026-08-30-artificialneko-rewards-bot-design.md`](docs/superpowers/specs/2026-08-30-artificialneko-rewards-bot-design.md)
+[`docs/superpowers/specs/2026-08-30-artificialcat-rewards-bot-design.md`](docs/superpowers/specs/2026-08-30-artificialcat-rewards-bot-design.md)
 and the implementation plan in [`docs/superpowers/plans/`](docs/superpowers/plans/).

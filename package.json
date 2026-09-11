@@ -1,9 +1,9 @@
 {
-  "name": "artificialneko-api",
+  "name": "artificialcat-api",
   "version": "1.0.0",
   "private": true,
-  "description": "Rewards bot and stats API for Artificial Neko — claims NEKO's NVDA creator fees, airdrops them to holders, and serves market cap, holders, total NVDA rewarded and the payout feed.",
-  "homepage": "https://artificialneko.com",
+  "description": "Rewards bot and stats API for Artificial Cat — claims CAT's NVDA creator fees, airdrops them to holders, and serves market cap, holders, total NVDA rewarded and the payout feed.",
+  "homepage": "https://artificialcat.example",
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
