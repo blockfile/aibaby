@@ -17,7 +17,7 @@
 //                 Permit2 allowance naming this router. Missing or expired,
 //                 the swap reverts.
 //
-// This bot takes the ERC-20 path — CAT is quoted in NVDA, so the buyback
+// This bot takes the ERC-20 path — ARTCAT is quoted in NVDA, so the buyback
 // spends NVDA. The approvals are ensured HERE rather than by the caller,
 // because a swap that reverts on a lapsed Permit2 expiry does so after the
 // escrow has already been claimed and the holders paid.

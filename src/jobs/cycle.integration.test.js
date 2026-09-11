@@ -11,7 +11,7 @@ process.env.REWARD_PCT = '65';
 process.env.BURN_PCT = '25';
 process.env.GAS_PCT = '10';
 process.env.TOKEN_ADDRESS = '0x50d0d0da00ffd195d2d1d2448617ad039855ad2b';
-process.env.TOKEN_SYMBOL = 'CAT';
+process.env.TOKEN_SYMBOL = 'ARTCAT';
 process.env.TOKEN_DECIMALS = '18';
 process.env.MIN_HOLD = '100000';
 process.env.WALLET_PRIVATE_KEY = '';
@@ -77,7 +77,7 @@ test('a funded vault claims, splits and airdrops to holders', async () => {
   assert.ok(airdropStep.detail.sent > 0, 'the simulated holders were paid');
 });
 
-test('the buyback buys CAT with the burn share and destroys it', async () => {
+test('the buyback buys ARTCAT with the burn share and destroys it', async () => {
   simvault.reset(10);
   const cycle = await runCycle();
 

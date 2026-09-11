@@ -115,11 +115,11 @@ const explorerApi = (process.env.EXPLORER_API || 'https://robinhoodchain.blocksc
 const config = {
   port: num(process.env.PORT, 3000),
 
-  // CAT's contract address. Blank until the token is launched — every stat
+  // ARTCAT's contract address. Blank until the token is launched — every stat
   // then resolves to null, which the site renders as "—" rather than a zero.
   tokenAddress: lowerOrNull(process.env.TOKEN_ADDRESS),
-  // The site's ticker is $CAT (SITE.ticker in its config/site.js).
-  tokenSymbol: process.env.TOKEN_SYMBOL || 'CAT',
+  // The site's ticker is $ARTCAT (SITE.ticker in its config/site.js).
+  tokenSymbol: process.env.TOKEN_SYMBOL || 'ARTCAT',
   // Referenced in several places as `config.quoteSymbol || 'NVDA'` but never
   // actually defined, so every one of those fell through to the literal. Only
   // the burns feed, which had no fallback, exposed it - as a null where the
@@ -195,7 +195,7 @@ const config = {
   holdersTtlMs: num(process.env.HOLDERS_TTL_MS, 120_000),
 
   // ── Pons rewards ("Total NVDA Rewarded") ───────────────────────────────────
-  // CAT's 2% creator tax accrues in NVDA (tokenized NVIDIA stock) and routes to a
+  // ARTCAT's 2% creator tax accrues in NVDA (tokenized NVIDIA stock) and routes to a
   // per-token fee distributor that pushes payouts to holder wallets. The
   // cumulative "paid to holders" total comes from Pons's public API — the same
   // source their token page renders (see src/services/rewards.js).
@@ -294,7 +294,7 @@ const config = {
   universalRouter: lowerOr(process.env.UNIVERSAL_ROUTER, '0x8876789976decbfcbbbe364623c63652db8c0904'),
   v4Quoter: lowerOr(process.env.V4_QUOTER, '0x5c3db48cfd8352d845fac70009d714f0ce1d7914'),
   permit2: lowerOr(process.env.PERMIT2, '0x000000000022d473030f116ddee9f6b43ac78ba3'),
-  minHold: num(process.env.MIN_HOLD, 100_000),
+  minHold: num(process.env.MIN_HOLD, 10_000),
   rewardCapPct: num(process.env.REWARD_CAP_PCT, 0),
   clusters: parseClusters(process.env.CLUSTERS),
   airdropBatchSize: num(process.env.AIRDROP_BATCH_SIZE, 30),

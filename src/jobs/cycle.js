@@ -5,8 +5,8 @@
 //   sweep pending fees into the escrow   (best-effort — may need pons's operator)
 //   claimToken(NVDA)                     -> NVDA in the wallet
 //     -> GAS_PCT:    sell for native ETH, so the bot can pay its own gas
-//     -> REWARD_PCT: airdrop pro-rata to CAT holders
-//     -> BURN_PCT:   buy CAT with it and burn what was bought. ZERO by
+//     -> REWARD_PCT: airdrop pro-rata to ARTCAT holders
+//     -> BURN_PCT:   buy ARTCAT with it and burn what was bought. ZERO by
 //                    default here — the leg is built and tested but this
 //                    deployment does not fund it, so it skips every cycle.
 //     -> remainder:  the dev cut — forwarded to DEV_PAYOUT_ADDRESS if one is
@@ -245,7 +245,7 @@ async function runCycle() {
   const log = (msg) => console.log(`[cycle ${id}] ${msg}`);
 
   try {
-    if (!config.tokenAddress) throw new Error('TOKEN_ADDRESS (CAT) is required');
+    if (!config.tokenAddress) throw new Error('TOKEN_ADDRESS (ARTCAT) is required');
 
     const launch = await getLaunch();
     const phase = describePhase(launch);
@@ -341,7 +341,7 @@ async function runCycle() {
       log(`reward leg skipped: ${reason}`);
     }
 
-    // 5. Buy CAT with the burn share and destroy it. Non-fatal: the
+    // 5. Buy ARTCAT with the burn share and destroy it. Non-fatal: the
     //    holders have already been paid, so a failed swap leaves the NVDA in
     //    the wallet to retry next cycle rather than losing the whole cycle.
     const buyback = await buybackAndBurn({ launch, quoteAmount: burnQuote });

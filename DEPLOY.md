@@ -138,7 +138,7 @@ Values for this deployment:
 PORT=3000
 BOT_PORT=3100
 
-TOKEN_ADDRESS=                 # blank until CAT launches
+TOKEN_ADDRESS=                 # blank until ARTCAT launches
 WALLET_PRIVATE_KEY=            # the creator wallet — set at go-live, not now
 DRY_RUN=true
 
@@ -166,7 +166,7 @@ DISPERSE_ADDRESS=
 REWARD_PCT=90
 BURN_PCT=0        # buyback+burn is BUILT but deliberately not funded
 GAS_PCT=10
-MIN_HOLD=100000
+MIN_HOLD=10000
 
 TRIGGER_MODE=accumulation
 CLAIM_EVERY_USD=100
@@ -314,7 +314,7 @@ against an in-memory fee vault. No key, no RPC and no funds are involved.
 refuses immediately:
 
 ```json
-{"status":"failed","error":"TOKEN_ADDRESS (CAT) is required"}
+{"status":"failed","error":"TOKEN_ADDRESS (ARTCAT) is required"}
 ```
 
 That is correct — it will not pretend to work on a token that does not exist.
@@ -339,7 +339,7 @@ curl -H "x-api-key: $API_KEY" -X POST http://127.0.0.1:3100/run
 ```
 
 A rehearsed cycle claims NVDA, sells a slice for gas, airdrops NVDA to holders,
-then buys CAT with the burn share and destroys it. The `reward-swap` step is
+then buys ARTCAT with the burn share and destroys it. The `reward-swap` step is
 recorded but does nothing while the reward token IS the quote token: there is
 nothing to swap, so it reports the claim straight through with no signature.
 A `reward-swap` with a transaction hash means `REWARD_TOKEN_ADDRESS` points at
@@ -428,7 +428,7 @@ curl -s https://api.artificialcat.example/stats | head -c 200
 - **The `reward-swap` line.** It is the leg with no production history. A cycle
   that claims and then buys nothing pays nobody, so it is the first thing to
   read in a quiet cycle.
-- **`MIN_HOLD`.** 100,000 CAT, matching what the site advertises. Lowering it
+- **`MIN_HOLD`.** 10,000 ARTCAT, matching what the site advertises. Lowering it
   toward 1 pays dust to nearly every wallet and multiplies per-cycle gas.
 - **A quiet twenty minutes is not a symptom.** Distributions land on
   `TRIGGER_SCHEDULE` (default hourly, on the hour), not whenever the tank fills.

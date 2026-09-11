@@ -1,6 +1,6 @@
 'use strict';
 
-// Total CAT bought back and burned, from this bot's own ledger.
+// Total ARTCAT bought back and burned, from this bot's own ledger.
 //
 // Same source and same rules as the rewards total: the bot is the only thing
 // performing these burns, so its records are the authority, and only burns

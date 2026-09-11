@@ -11,7 +11,7 @@ const assert = require('node:assert');
 // unrelated tests failing after a split-validation test was added.
 const OWNED = [
   'REWARD_PCT', 'BURN_PCT', 'GAS_PCT', 'TRIGGER_MODE', 'CLAIM_EVERY_USD', 'DEV_PAYOUT_ADDRESS',
-  'POLL_SCHEDULE', 'TRIGGER_SCHEDULE',
+  'POLL_SCHEDULE', 'TRIGGER_SCHEDULE', 'TOKEN_SYMBOL', 'MIN_HOLD',
 ];
 
 function loadConfig(env = {}) {
@@ -130,4 +130,13 @@ test('the log chunk fits the strictest RPC we have met, not the most generous', 
   const config = loadConfig({ DRY_RUN: 'true' });
   assert.ok(config.holderIndexChunk <= 10_000, `must fit a 10,000 cap, got ${config.holderIndexChunk}`);
   assert.ok(config.holderIndexChunk >= 1_000, 'but not so small the backfill takes forever');
+});
+
+test('the defaults match what the Artificial Cat site tells visitors', () => {
+  // The site's src/site.js: ticker 'ARTCAT', minimumHold 10_000, and its
+  // Distribution section promises that 10,000 $ARTCAT makes a wallet eligible.
+  // A stricter bot would silently skip wallets the page told they qualify.
+  const config = loadConfig({ DRY_RUN: 'true' });
+  assert.strictEqual(config.tokenSymbol, 'ARTCAT');
+  assert.strictEqual(config.minHold, 10_000);
 });

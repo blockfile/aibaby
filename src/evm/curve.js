@@ -5,7 +5,7 @@
 //
 // `buy(quoteIn, minTokensOut, recipient)` is payable, and on a NATIVE-quote
 // launch the quote amount is passed both as the argument and as msg.value. This
-// launch is not one of those: CAT is quoted in NVDA, so `isNativeQuote()`
+// launch is not one of those: ARTCAT is quoted in NVDA, so `isNativeQuote()`
 // is false, msg.value stays zero, and the curve pulls the NVDA with
 // transferFrom — which means the wallet must approve the curve first.
 //

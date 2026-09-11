@@ -19,7 +19,7 @@ function curveAt(address) {
 }
 
 async function getLaunch(token = config.tokenAddress) {
-  if (!token) throw new Error('TOKEN_ADDRESS (CAT) is required');
+  if (!token) throw new Error('TOKEN_ADDRESS (ARTCAT) is required');
 
   if (config.dryRun) {
     return {

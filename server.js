@@ -45,7 +45,7 @@ app.use(
 app.get('/', (req, res) => {
   res.json({
     name: 'artificialcat-api',
-    description: 'CAT market cap, holder count, total NVDA rewarded and the live rewards feed for the Artificial Cat site',
+    description: 'ARTCAT market cap, holder count, total NVDA rewarded and the live rewards feed for the Artificial Cat site',
     token: { symbol: config.tokenSymbol, address: config.tokenAddress },
     endpoints: [
       'GET /token',

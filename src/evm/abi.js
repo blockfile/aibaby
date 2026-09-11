@@ -68,7 +68,7 @@ const HOOK_ABI = [
 // ambiguous and every call site would have to spell out the full signature.
 //
 // The native `claim()` / `balanceOf()` pair is kept for completeness but is
-// never called by this project: CAT is quoted in NVDA, so its fees land on
+// never called by this project: ARTCAT is quoted in NVDA, so its fees land on
 // the TOKEN ledger and the native one always reads zero.
 const ESCROW_ABI = [
   'function balanceOf(address) view returns (uint256)',

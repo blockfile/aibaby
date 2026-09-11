@@ -27,7 +27,7 @@ const { getCreatorFees } = require('../services/creatorfees');
 const router = express.Router();
 
 /**
- * Pure: what the burned CAT is worth at the CURRENT price.
+ * Pure: what the burned ARTCAT is worth at the CURRENT price.
  *
  * Deliberately distinct from `burnQuoteSpent`, which is what the buybacks
  * actually cost in NVDA. The two answer different questions and drift apart as
@@ -116,14 +116,24 @@ function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, cu
   const totalRewarded = rewards.totalRewarded ?? null; // NVDA token amount
   const totalRewardedUsd = rewardedUsd(rewards, rewardPrice);
   const holders = token.holders ?? null;
+  const marketCap = market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token);
   return {
-    marketCap: market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token),
-    // The Artificial Cat site reads these two first and falls back to the
-    // camelCase names; serving both means a frontend rename cannot break it.
-    market_cap_usd: market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token),
-    total_distributed_usd: rewardedUsd(rewards, rewardPrice),
+    marketCap,
+    // ── The Artificial Cat site (its src/api/stats.js) ─────────────────────
+    // Reads exactly these four and renders any non-number as "—":
+    //   marketCapUsd, nvdaDistributed (TOKENS — the panel appends "$NVDA"),
+    //   nvdaDistributedUsd ("≈ $… routed to holders"), totalHolders.
+    // The amount is the bot's own ledger total, which counts only payouts
+    // with a real transaction hash, so the tile can never show a DRY_RUN.
+    marketCapUsd: marketCap,
+    nvdaDistributed: totalRewarded,
+    nvdaDistributedUsd: totalRewardedUsd,
+    // The Neko-template site (tokenmeme15) reads these two first and falls back
+    // to the camelCase names; serving both means a frontend rename cannot break it.
+    market_cap_usd: marketCap,
+    total_distributed_usd: totalRewardedUsd,
     holders,
-    totalHolders: holders, // the name this site's mock shape uses
+    totalHolders: holders, // the name both site templates read
     totalRewarded,
     // "Total $NVDA Distributed" panel — the site shows this without a "$", so
     // it is the NVDA token amount, not USD. (Field name inherited from the
@@ -134,7 +144,7 @@ function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, cu
     // (`raw.<asset>Rewarded ?? raw.<asset>_rewarded ?? raw.rewarded`).
     nvdaRewarded: totalRewardedUsd,
     rewarded: totalRewardedUsd,
-    // The Artificial Cat site labels its card "TOTAL $NVDA DISTRIBUTED" and
+    // The Neko-template site labels its card "TOTAL $NVDA DISTRIBUTED" and
     // resolves it from `rewardDistributed` FIRST, falling back to
     // `totalDistributed` — which is USD. Without this pair it put dollars under
     // an NVDA label, overstating the token count by NVDA's price. Tokens here,
@@ -146,7 +156,7 @@ function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, cu
     // NVDA token amount that `totalRewarded` carries.
     totalDistributed: totalRewardedUsd,
     // ── Buyback + burn ──────────────────────────────────────────────────────
-    // CAT tokens destroyed. The headline number for the burn tile.
+    // ARTCAT tokens destroyed. The headline number for the burn tile.
     totalBurned: burns.totalBurned ?? null,
     // What those buybacks cost, in NVDA — what was actually spent.
     burnQuoteSpent: burns.burnQuoteSpent ?? null,

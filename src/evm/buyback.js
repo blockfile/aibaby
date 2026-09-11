@@ -1,6 +1,6 @@
 'use strict';
 
-// Buy CAT with NVDA, then burn what was bought.
+// Buy ARTCAT with NVDA, then burn what was bought.
 //
 // This is the one place the bot swaps. The reward leg never does — fees arrive
 // already denominated in NVDA, which is what holders are paid — so slippage,

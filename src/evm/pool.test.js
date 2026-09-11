@@ -11,7 +11,7 @@ const HOOK = '0xE5e702641Ea86F4ae6cC3cDaeD2B886f976Be044';
 const ROBBIE_POOL_ID = '0x813707ded6381854b2d96c3d942960c5d362244a0903ac7d5c4d471e0c6b175f';
 
 // An ERC-20-QUOTED pons v2 pool — the shape every launch in THIS project has,
-// since CAT is quoted in NVDA and not in native ETH. Ryzen Kitty (RYZEN)
+// since ARTCAT is quoted in NVDA and not in native ETH. Ryzen Kitty (RYZEN)
 // paired with the AMD Robinhood Token, read from chain 2026-08-29 and
 // cross-checked against StateView.getSlot0 and DexScreener's pair address.
 // Worth its own fixture because with two real addresses the currency ordering
