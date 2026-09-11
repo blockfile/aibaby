@@ -328,7 +328,7 @@ The airdrop needs every holder and balance. Two sources, in order:
 | **Chain index** (`HOLDER_INDEX_FROM_BLOCK`) | Transfer logs replayed on your own RPC |
 | **Explorer** (fallback) | Blockscout, 50 holders a page |
 
-The index is preferred for speed — ARTCAT's whole history is 33,412 transfers in
+The index is preferred for speed — the sibling NEKO launch's whole history is 33,412 transfers in
 20s, and each later cycle only reads new blocks, about 2.7s — but the reason it
 exists is that it can be **checked**. Balances must sum to `totalSupply()`
 before a single NVDA moves; if they do not, the index refuses its own answer and

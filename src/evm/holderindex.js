@@ -9,7 +9,7 @@
 // its answer: a short list is paid as a short list.
 //
 // The chain has the same information and your own RPC serves it. Measured on
-// this chain: 50,000 blocks of Transfer logs in 872ms, and ARTCAT's entire history
+// this chain: 50,000 blocks of Transfer logs in 872ms, and the sibling NEKO launch's entire history
 // is ~12 such calls — about 11 seconds, once. After that each cycle indexes only
 // the blocks since the last one, which is a single fast call.
 //
