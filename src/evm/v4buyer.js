@@ -40,20 +40,56 @@ async function ensureBuyerAllowance({ tokenAddress, needed }) {
  *
  * @returns {Promise<import('ethers').TransactionResponse>}
  */
+// Ethers sends the node's gas ESTIMATE as the limit, with no headroom. For a
+// swap through a HOOKED v4 pool that is not enough: the hook's work varies with
+// pool state, so an estimate taken one block earlier can fall short, an inner
+// call runs out of gas, and the whole swap reverts with EMPTY revert data while
+// gas remains — which reads like a broken pool and is not one.
+//
+// Seen live: the same call, same amount, same pool reverted having burned
+// 432,130 of a 445,846 limit, while the successful swap 19 minutes earlier used
+// 410,501 of 448,736. Replayed as an eth_call (which is not gas-constrained) it
+// succeeded, and the pool quoted normally throughout.
+//
+// So estimate, then add half again with a floor. Unused gas is refunded and this
+// chain prices gas at ~0.1 gwei, so the headroom costs nothing measurable; the
+// swap failing costs holders their whole reward leg for that cycle.
+const GAS_BUFFER_NUM = 3n;
+const GAS_BUFFER_DEN = 2n;
+const GAS_FLOOR = 600_000n;
+
+/** Pure: an estimate -> the limit to send, never below the floor. */
+function withGasHeadroom(estimate) {
+  const padded = (BigInt(estimate) * GAS_BUFFER_NUM) / GAS_BUFFER_DEN;
+  return padded > GAS_FLOOR ? padded : GAS_FLOOR;
+}
+
 async function buyViaV4Buyer({ poolKey, zeroForOne, amountIn, amountOutMinimum }) {
   const currencyIn = zeroForOne ? poolKey.currency0 : poolKey.currency1;
   await ensureBuyerAllowance({ tokenAddress: currencyIn, needed: amountIn });
 
   const buyer = new Contract(config.v4BuyerAddress, V4_BUYER_ABI, wallet);
-  return sendTx(() =>
-    buyer.buy(
-      [poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hooks],
-      zeroForOne,
-      amountIn,
-      amountOutMinimum,
-      wallet.address
-    )
-  );
+  const args = [
+    [poolKey.currency0, poolKey.currency1, poolKey.fee, poolKey.tickSpacing, poolKey.hooks],
+    zeroForOne,
+    amountIn,
+    amountOutMinimum,
+    wallet.address,
+  ];
+
+  // A failing estimate is a real signal (no liquidity, minOut unreachable) and
+  // should surface as an error here rather than as a mined, reverted transaction.
+  let gasLimit;
+  try {
+    gasLimit = withGasHeadroom(await buyer.buy.estimateGas(...args));
+  } catch (err) {
+    throw new Error(
+      `the v4 swap would revert before sending (${err.shortMessage || err.message}) — ` +
+        'nothing was sent, so the claim stays in the wallet'
+    );
+  }
+
+  return sendTx(() => buyer.buy(...args, { gasLimit }));
 }
 
-module.exports = { buyViaV4Buyer, ensureBuyerAllowance, V4_BUYER_ABI };
+module.exports = { buyViaV4Buyer, ensureBuyerAllowance, withGasHeadroom, V4_BUYER_ABI };

@@ -25,7 +25,7 @@ const config = require('../src/config');
 const db = require('../src/db');
 const repo = require('../src/db/repository');
 const { getLaunch } = require('../src/evm/launch');
-const { runRewardLeg, summarizeReward } = require('../src/jobs/cycle');
+const { runRewardLegs, summarizeReward } = require('../src/jobs/cycle');
 const { buybackAndBurn } = require('../src/evm/buyback');
 const { erc20 } = require('../src/evm/erc20');
 const { provider } = require('../src/evm/provider');
@@ -84,7 +84,10 @@ async function main() {
 
     let reward = { skipped: true };
     if (holders > 0) {
-      reward = await runRewardLeg(id, { launch, quoteAmount: holders });
+      // Pays the standard mix of reward assets. To recover a failed leg as
+      // ONE asset — e.g. the AI half of a cycle whose swap reverted — run this
+      // with REWARD2_SHARE_PCT=100 (all AI) or =0 (all NVDA).
+      reward = await runRewardLegs(id, { launch, quoteAmount: holders });
       // .note, not the object. summarizeReward returns {status, note} and
       // interpolating it printed "reward: [object Object]" — the one line that
       // says what the recovery did, unreadable at the moment you are watching it.

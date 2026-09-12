@@ -240,3 +240,18 @@ test('a total failure names the assets rather than hardcoding one', () => {
   assert.match(out.error, /NVDA \+ AI/);
   assert.doesNotMatch(out.error, /received NVDA \(/, 'the old single-asset wording is gone');
 });
+
+test('every name scripts/recover.js imports from cycle.js actually exists', () => {
+  // Renaming runRewardLeg -> runRewardLegs broke the recovery script silently:
+  // nothing imports it in the test suite, and it is only ever run by hand, at
+  // the one moment it is needed — after a cycle has already failed.
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'scripts', 'recover.js'), 'utf8');
+  const m = /const \{([^}]+)\} = require\('\.\.\/src\/jobs\/cycle'\)/.exec(src);
+  assert.ok(m, 'recover.js still imports from jobs/cycle');
+  const cycle = require('./cycle');
+  for (const name of m[1].split(',').map((s) => s.trim()).filter(Boolean)) {
+    assert.strictEqual(typeof cycle[name], 'function', `cycle.js must export ${name}`);
+  }
+});
