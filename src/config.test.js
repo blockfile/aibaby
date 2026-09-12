@@ -108,13 +108,13 @@ test('the wallet is not enumerable, so serialising config cannot trigger it', ()
   process.env.DRY_RUN = 'true';
 });
 
-test('the poll looks every minute while the trigger only fires hourly', () => {
+test('the poll looks every minute while the trigger fires every half hour', () => {
   // Two schedules, because the poll does two jobs: it writes the fee gauge the
   // site reads, and it decides whether to pay. Tying them together means either
   // a frozen gauge or an hourly payout, never both.
   const config = loadConfig({ DRY_RUN: 'true' });
   assert.strictEqual(config.pollSchedule, '* * * * *');
-  assert.strictEqual(config.triggerSchedule, '0 * * * *');
+  assert.strictEqual(config.triggerSchedule, '*/30 * * * *');
 });
 
 test('the trigger cadence is an ordinary cron string, so any interval works', () => {

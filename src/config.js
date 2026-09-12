@@ -353,13 +353,19 @@ const config = {
   // gauge frozen for an hour at a time or a payout on every tick.
   pollSchedule: process.env.POLL_SCHEDULE || '* * * * *',
   // When a distribution may actually happen. An ordinary cron string, so the
-  // cadence is whatever you want: hourly is "0 * * * *", every half hour is
-  // "*/30 * * * *", every twenty minutes "*/20 * * * *".
+  // cadence is whatever you want: every half hour is "*/30 * * * *" (the
+  // default, at :00 and :30), hourly "0 * * * *", every twenty minutes
+  // "*/20 * * * *".
+  //
+  // This SHARES the :00 and :30 minutes with POLL_SCHEDULE. That is safe and
+  // deliberate: a gauge tick neither takes nor waits on the run lock, which is
+  // the fix for the bug where an hourly trigger never fired at all because the
+  // every-minute gauge tick held the lock at the top of the hour.
   //
   // Prefer a divisor of 60. Cron's step operator restarts at the top of each
   // hour, so "*/45" fires at :00 and :45 and then jumps straight back to :00 —
   // a 45-minute gap followed by a 15-minute one, not every 45 minutes.
-  triggerSchedule: process.env.TRIGGER_SCHEDULE || '0 * * * *',
+  triggerSchedule: process.env.TRIGGER_SCHEDULE || '*/30 * * * *',
   // The gate is denominated in USD, not tokens: fees accrue in NVDA and one
   // NVDA is worth hundreds of dollars, so a token threshold is unusable.
   claimEveryUsd: num(process.env.CLAIM_EVERY_USD, 100),

@@ -176,7 +176,7 @@ POLL_SCHEDULE=* * * * *
 # When a distribution may actually happen. Any cron string: */30 for every half
 # hour, */20 for every twenty minutes. A payout needs BOTH this schedule coming
 # round AND the fees clearing CLAIM_EVERY_USD.
-TRIGGER_SCHEDULE=0 * * * *
+TRIGGER_SCHEDULE=*/30 * * * *
 
 MONGODB_URI=                   # from step 4
 MONGODB_DB=artificialcat
@@ -439,7 +439,8 @@ curl -s https://api.artificialcat.meme/stats | head -c 200
   `REWARD2_SHARE_PCT=0` to fall back to one asset. Below `GAS_RESERVE_ETH` a
   cycle refuses to start rather than claiming and failing to pay.
 - **A quiet twenty minutes is not a symptom.** Distributions land on
-  `TRIGGER_SCHEDULE` (default hourly, on the hour), not whenever the tank fills.
+  `TRIGGER_SCHEDULE` (default every 30 minutes, at :00 and :30), not whenever the
+  tank fills.
   A gauge sitting at 100% between trigger ticks is the design, not a stall — the
   scheduler logs `waiting for the next trigger window` when that is what is
   happening. `GET /status` reports both schedules under `trigger`.

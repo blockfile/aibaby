@@ -79,7 +79,7 @@ answers.
 | Env | Default | Job |
 | --- | --- | --- |
 | `POLL_SCHEDULE` | `* * * * *` | read the chain, price it, write the fee gauge. **Never pays.** |
-| `TRIGGER_SCHEDULE` | `0 * * * *` | when a distribution may actually happen. |
+| `TRIGGER_SCHEDULE` | `*/30 * * * *` | when a distribution may actually happen. |
 
 A distribution needs **both**: the trigger schedule comes round *and* the
 claimable fees clear `CLAIM_EVERY_USD`. If the hour arrives and the tank is
@@ -89,8 +89,8 @@ are not lost, they keep accruing on-chain until a check finds enough.
 The cadence is an ordinary cron string, so it is whatever you want it to be:
 
 ```
-0 * * * *      hourly, on the hour              (default)
-*/30 * * * *   every 30 minutes, at :00 and :30
+*/30 * * * *   every 30 minutes, at :00 and :30 (default)
+0 * * * *      hourly, on the hour
 */20 * * * *   every 20 minutes
 */5 * * * *    every 5 minutes — pays as soon as $100 lands
 ```
@@ -308,7 +308,7 @@ Everything is documented in `.env.example`. The ones worth knowing first:
 | `QUOTE_TOKEN_ADDRESS` | NVDA | the quote asset **and** the reward asset — one address, both roles |
 | `CLAIM_EVERY_USD` | `100` | fire once the accrued NVDA is worth this |
 | `POLL_SCHEDULE` | `* * * * *` | how often the chain is read and the gauge written; never pays |
-| `TRIGGER_SCHEDULE` | `0 * * * *` | when a distribution may happen — `*/30 * * * *` for every half hour |
+| `TRIGGER_SCHEDULE` | `*/30 * * * *` | when a distribution may happen — `0 * * * *` for hourly |
 | `REWARD_PCT` | `90` | share of a claim that reaches holders, in either asset |
 | `REWARD2_SHARE_PCT` | `50` | how much of that share is paid as AI rather than NVDA |
 | `REWARD2_TOKEN_ADDRESS` | AI `0x2e8c…1e18` | the second reward asset |
