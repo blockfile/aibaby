@@ -17,11 +17,12 @@ const db = require('../src/db');
 const { getMarketData } = require('../src/services/marketdata');
 const { getTokenInfo } = require('../src/services/holders');
 const { getRewards } = require('../src/services/rewards');
+const { getRewardPrice, getReward2Price } = require('../src/services/rewardprice');
 const { getBurns } = require('../src/services/burns');
 const { getCurveMarket } = require('../src/services/curvemarket');
 const { getQuotePrice } = require('../src/services/quoteprice');
 const { getFeedPage } = require('../src/services/rewardsfeed');
-const { buildStats } = require('../src/routes/stats');
+const { buildStats, supplyFallback } = require('../src/routes/stats');
 const { getLaunch, describePhase } = require('../src/evm/launch');
 const { escrowBalanceQuote } = require('../src/evm/escrow');
 const { sweepableQuote, sweepBlockedByOperator } = require('../src/evm/sweep');
@@ -250,7 +251,7 @@ async function main() {
     return;
   }
 
-  const [market, token, rewards, burns, curve, quote, feed] = await Promise.allSettled([
+  const [market, token, rewards, burns, curve, quote, feed, rewardPrice, reward2Price] = await Promise.allSettled([
     getMarketData(),
     getTokenInfo(),
     getRewards(),
@@ -258,6 +259,8 @@ async function main() {
     getCurveMarket(),
     getQuotePrice(),
     getFeedPage(null, 3),
+    getRewardPrice(),
+    getReward2Price(),
   ]);
 
   hr('DEXSCREENER (market cap)');
@@ -328,8 +331,17 @@ async function main() {
         burns: burns.status === 'fulfilled' ? burns.value : {},
         curve: curve.status === 'fulfilled' ? curve.value : {},
         quote: quote.status === 'fulfilled' ? quote.value : {},
+        // The same arguments the route passes, or this preview reports nulls
+        // for fields the live endpoint fills in — which reads as a fault.
+        rewardPrice: rewardPrice.status === 'fulfilled' ? rewardPrice.value : {},
+        reward2Price: reward2Price.status === 'fulfilled' ? reward2Price.value : {},
         symbol: config.tokenSymbol,
         tokenAddress: config.tokenAddress,
+        supply: supplyFallback(config),
+        rewardSymbol: config.rewardSymbol,
+        rewardTokenAddress: config.rewardTokenAddress,
+        reward2Symbol: config.reward2Symbol,
+        reward2TokenAddress: config.reward2SharePct > 0 ? config.reward2TokenAddress : null,
       }),
       null,
       2
