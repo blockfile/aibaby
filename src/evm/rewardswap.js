@@ -1,12 +1,12 @@
 'use strict';
 
-// Buy the REWARD token with claimed quote.
+// Buy a REWARD token with claimed quote.
 //
-// This is what makes Artificial Cat different from the lineage it grew
-// from. There, the asset claimed from the escrow was the same asset paid to
-// holders, so a cycle claimed and airdropped without ever touching a DEX. Here
-// fees arrive as NVDA and holders are paid in Artificial Inu, so every cycle
-// has to buy the reward before it can distribute it.
+// Artificial Cat pays holders TWO assets: NVDA, which the fees already arrive
+// in and which therefore needs no swap at all, and AI, which has to be bought
+// first. Both go through here — the leg being paid is passed in, so the same
+// code serves the asset that needs a DEX and the one that does not, and adding
+// a third asset is a descriptor rather than a new path.
 //
 // It routes through V4Buyer rather than the UniversalRouter, for the same
 // reason the buyback does: the router cannot settle an ERC-20 input into a
@@ -25,15 +25,47 @@ const { provider, wallet } = require('./provider');
 const { toUnitString } = require('./units');
 const { parseUnits } = require('ethers');
 
-/** The AI/NVDA pool. Its key is configured, not derived — it is an ordinary
+/**
+ * A reward leg: which asset to pay, and how to buy it if it is not the quote.
+ * Leg one is whatever REWARD_TOKEN_ADDRESS names — on this launch the quote
+ * asset itself, so its pool fields are never used.
+ */
+function rewardLegOne() {
+  return {
+    leg: 1,
+    tokenAddress: config.rewardTokenAddress,
+    decimals: config.rewardDecimals,
+    symbol: config.rewardSymbol,
+    poolFee: config.rewardPoolFee,
+    poolTickSpacing: config.rewardPoolTickSpacing,
+    poolHooks: config.rewardPoolHooks,
+    slippageBps: config.rewardSlippageBps,
+  };
+}
+
+/** Leg two: AI, bought with part of the holders' share through the v4 pool. */
+function rewardLegTwo() {
+  return {
+    leg: 2,
+    tokenAddress: config.reward2TokenAddress,
+    decimals: config.reward2Decimals,
+    symbol: config.reward2Symbol,
+    poolFee: config.reward2PoolFee,
+    poolTickSpacing: config.reward2PoolTickSpacing,
+    poolHooks: config.reward2PoolHooks,
+    slippageBps: config.reward2SlippageBps,
+  };
+}
+
+/** The pool that buys this leg. Configured, not derived — it is an ordinary
  *  Uniswap pool with no launch record to read it from. */
-function rewardPoolKey() {
+function rewardPoolKey(reward = rewardLegOne()) {
   return buildPoolKey({
-    token: config.rewardTokenAddress,
+    token: reward.tokenAddress,
     quoteToken: config.quoteTokenAddress,
-    fee: config.rewardPoolFee,
-    tickSpacing: config.rewardPoolTickSpacing,
-    hooks: config.rewardPoolHooks,
+    fee: reward.poolFee,
+    tickSpacing: reward.poolTickSpacing,
+    hooks: reward.poolHooks,
   });
 }
 
@@ -43,12 +75,13 @@ function clampToBalance(wanted, held) {
 }
 
 /**
- * Swap `quoteAmount` of NVDA for the reward token, into this wallet.
+ * Swap `quoteAmount` of NVDA for this leg's reward token, into this wallet.
  *
+ * @param {{quoteAmount: number, reward?: object}} args `reward` defaults to leg one.
  * @returns {Promise<{bought: boolean, tokensBought: number, signature: string|null,
  *                    quoteSpent: number, error?: string}>}
  */
-async function buyReward({ quoteAmount }) {
+async function buyReward({ quoteAmount, reward = rewardLegOne() }) {
   const base = { bought: false, tokensBought: 0, signature: null, quoteSpent: 0 };
   if (!(quoteAmount > 0)) return { ...base, skipped: true, reason: 'reward share of this claim is zero' };
 
@@ -60,8 +93,8 @@ async function buyReward({ quoteAmount }) {
   //
   // The rest of the cycle is unchanged, so one codebase serves both shapes:
   // pay the quote asset directly, or buy a third token with it first.
-  if (config.rewardTokenAddress.toLowerCase() === config.quoteTokenAddress.toLowerCase()) {
-    const raw = parseUnits(toUnitString(quoteAmount, config.rewardDecimals), config.rewardDecimals);
+  if (reward.tokenAddress.toLowerCase() === config.quoteTokenAddress.toLowerCase()) {
+    const raw = parseUnits(toUnitString(quoteAmount, reward.decimals), reward.decimals);
     return {
       bought: raw > 0n,
       boughtRaw: raw,
@@ -77,8 +110,9 @@ async function buyReward({ quoteAmount }) {
     // magnitude rather than invented. Every chain call below is skipped: a dry
     // run must never need an RPC, and this one would fail having already
     // "claimed" the escrow.
-    const tokens = +(quoteAmount * 900).toFixed(9);
-    const boughtRaw = parseUnits(toUnitString(tokens, config.rewardDecimals), config.rewardDecimals);
+    // Measured 2026-09-12: NVDA ~$221, AI ~$0.30, so 1 NVDA is roughly 730 AI.
+    const tokens = +(quoteAmount * 730).toFixed(9);
+    const boughtRaw = parseUnits(toUnitString(tokens, reward.decimals), reward.decimals);
     return {
       bought: boughtRaw > 0n,
       boughtRaw,
@@ -101,27 +135,31 @@ async function buyReward({ quoteAmount }) {
     );
   }
 
-  const poolKey = rewardPoolKey();
+  const poolKey = rewardPoolKey(reward);
   const zeroForOne = isZeroForOne(poolKey, config.quoteTokenAddress);
   const quoted = await quoteExactInSingle({ poolKey, zeroForOne, amountIn: spendRaw });
-  if (quoted <= 0n) throw new Error(`the reward pool quoted zero for ${config.rewardTokenAddress}`);
+  if (quoted <= 0n) {
+    throw new Error(
+      `the ${reward.symbol} pool quoted zero for ${reward.tokenAddress} — check REWARD${reward.leg === 2 ? '2' : ''}_POOL_FEE/TICK_SPACING/HOOKS: a wrong key names an empty pool, not this one`
+    );
+  }
 
   // A floor, not a target. The quote is advisory — the hook takes its cut
   // after the swap — so this only refuses a fill far worse than quoted.
-  const minOut = (quoted * BigInt(10000 - Math.round(config.rewardSlippageBps))) / 10000n;
+  const minOut = (quoted * BigInt(10000 - Math.round(reward.slippageBps))) / 10000n;
 
-  const before = await erc20(config.rewardTokenAddress, provider).balanceOf(wallet.address);
+  const before = await erc20(reward.tokenAddress, provider).balanceOf(wallet.address);
   const tx = await buyViaV4Buyer({ poolKey, zeroForOne, amountIn: spendRaw, amountOutMinimum: minOut });
   await tx.wait();
-  const after = await erc20(config.rewardTokenAddress, provider).balanceOf(wallet.address);
+  const after = await erc20(reward.tokenAddress, provider).balanceOf(wallet.address);
 
   // Measured, not quoted: what we can actually hand to holders is the balance
   // delta. Airdropping a quoted figure would overrun the wallet by the hook's fee.
-  const decimals = config.dryRun ? config.rewardDecimals : await getDecimals(config.rewardTokenAddress);
+  const decimals = config.dryRun ? reward.decimals : await getDecimals(reward.tokenAddress);
   const boughtRaw = after > before ? after - before : 0n;
 
   console.log(
-    `[tx] bought ${formatUnits(boughtRaw, decimals)} ${config.rewardSymbol} ` +
+    `[tx] bought ${formatUnits(boughtRaw, decimals)} ${reward.symbol} ` +
       `for ${formatUnits(spendRaw, config.quoteDecimals)} ${config.quoteSymbol}: ${tx.hash}`
   );
 
@@ -134,4 +172,4 @@ async function buyReward({ quoteAmount }) {
   };
 }
 
-module.exports = { buyReward, rewardPoolKey, clampToBalance, poolIdOf };
+module.exports = { buyReward, rewardPoolKey, rewardLegOne, rewardLegTwo, clampToBalance, poolIdOf };

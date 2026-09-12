@@ -168,3 +168,75 @@ test('the dev leg never goes negative on rounding', () => {
     assert.ok(Object.is(s.devQuote, 0) || s.devQuote > 0, 'must not be -0 either');
   }
 });
+
+
+// ── Two reward assets ───────────────────────────────────────────────────────
+//
+// REWARD_PCT decides how much of a claim reaches holders; REWARD2_SHARE_PCT
+// decides what it reaches them AS. At 90/0/10 with a 50% share, a 100 NVDA
+// claim pays 45 NVDA, the AI that 45 NVDA buys, and 10 for gas.
+
+test('the holders share divides between the two assets and always re-adds', () => {
+  const { splitRewardQuote } = require('./cycle');
+  assert.deepStrictEqual(splitRewardQuote(90, 50), { first: 45, second: 45 });
+  assert.deepStrictEqual(splitRewardQuote(90, 0), { first: 90, second: 0 });
+  assert.deepStrictEqual(splitRewardQuote(90, 100), { first: 0, second: 90 });
+  assert.deepStrictEqual(splitRewardQuote(0, 50), { first: 0, second: 0 });
+});
+
+test('an amount that does not halve cleanly leaves nothing behind', () => {
+  // The first leg is the REMAINDER, not its own percentage, so the two always
+  // sum to the share exactly. Computing both from percentages strands a
+  // rounding step of every claim in the wallet, cycle after cycle.
+  const { splitRewardQuote } = require('./cycle');
+  for (const share of [1.111080251, 3.7 * 0.65, 0.000000003, 123.456789012]) {
+    const { first, second } = splitRewardQuote(share, 50);
+    assert.strictEqual(+(first + second).toFixed(9), +share.toFixed(9), `${share} re-adds`);
+  }
+});
+
+test('a 45/45/10 plan pays NVDA directly and buys AI with the rest', () => {
+  const { rewardLegPlan } = require('./cycle');
+  const plan = rewardLegPlan(90, 50);
+  assert.strictEqual(plan.length, 2);
+  assert.deepStrictEqual(
+    plan.map((l) => [l.reward.symbol, l.quoteAmount]),
+    [['NVDA', 45], ['AI', 45]]
+  );
+  // Leg one IS the quote asset, so nothing is swapped for it.
+  assert.strictEqual(plan[0].reward.tokenAddress, require('../config').quoteTokenAddress);
+  assert.notStrictEqual(plan[1].reward.tokenAddress, require('../config').quoteTokenAddress);
+});
+
+test('a share of 0 gives exactly the single-asset cycle this ran before', () => {
+  const { rewardLegPlan } = require('./cycle');
+  const plan = rewardLegPlan(90, 0);
+  assert.strictEqual(plan.length, 1);
+  assert.strictEqual(plan[0].reward.symbol, 'NVDA');
+  assert.strictEqual(plan[0].quoteAmount, 90);
+});
+
+test('a zero-value leg is dropped rather than run for nothing', () => {
+  // At a 100% share the NVDA leg is zero: running it would record a skipped
+  // swap and an empty airdrop step every cycle for no reason.
+  const { rewardLegPlan } = require('./cycle');
+  assert.deepStrictEqual(rewardLegPlan(90, 100).map((l) => l.reward.symbol), ['AI']);
+  assert.deepStrictEqual(rewardLegPlan(0, 50), []);
+});
+
+test('the cycle note names the assets paid, so a log line says which', () => {
+  const { summarizeReward, legNames } = require('./cycle');
+  const legs = [{ symbol: 'NVDA' }, { symbol: 'AI' }];
+  assert.strictEqual(legNames({ legs }), 'NVDA + AI');
+  const out = summarizeReward({ skipped: false, recipients: 10, sent: 20, failed: 0, legs });
+  assert.strictEqual(out.status, 'complete');
+  assert.match(out.note, /NVDA \+ AI/);
+});
+
+test('a total failure names the assets rather than hardcoding one', () => {
+  const { summarizeReward } = require('./cycle');
+  const out = summarizeReward({ skipped: false, recipients: 40, sent: 0, failed: 80, legs: [{ symbol: 'NVDA' }, { symbol: 'AI' }] });
+  assert.strictEqual(out.status, 'failed');
+  assert.match(out.error, /NVDA \+ AI/);
+  assert.doesNotMatch(out.error, /received NVDA \(/, 'the old single-asset wording is gone');
+});

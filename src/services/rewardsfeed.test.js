@@ -27,21 +27,40 @@ test('a malformed cursor is a 400, not a crash', () => {
 });
 
 test('an airdrop row becomes the shape the site renders', () => {
+  const config = require('../config');
   const row = toRow({
     id: 7,
     recipient: '0xholder',
     amount_ui: 1.25,
+    reward_token: config.rewardTokenAddress,
     signature: `0x${'b'.repeat(64)}`,
     created_at: '2026-08-30T12:00:00.000Z',
   });
   assert.deepStrictEqual(row, {
     id: '7',
     wallet: '0xholder',
+    // Which asset the payout was. The feed carries two, so an unlabelled amount
+    // would be rendered under whichever ticker the page happens to print.
+    symbol: config.rewardSymbol,
+    token: config.rewardTokenAddress,
     amount: 1.25,
     txHash: `0x${'b'.repeat(64)}`,
     txUrl: `https://rh-scan.com/tx/0x${'b'.repeat(64)}`,
     at: Date.parse('2026-08-30T12:00:00.000Z'),
   });
+});
+
+test('each row is labelled with the asset it paid, per reward leg', () => {
+  const config = require('../config');
+  const { symbolForToken } = require('./rewardsfeed');
+  assert.strictEqual(symbolForToken(config.rewardTokenAddress), config.rewardSymbol);
+  assert.strictEqual(symbolForToken(config.reward2TokenAddress), config.reward2Symbol);
+  // Checksummed input is the same token: the ledger stores lowercase, but an
+  // older row or a hand-written one may not.
+  assert.strictEqual(symbolForToken(config.reward2TokenAddress.toUpperCase().replace('0X', '0x')), config.reward2Symbol);
+  // An asset this deployment no longer pays gets null rather than a wrong ticker.
+  assert.strictEqual(symbolForToken('0x' + '9'.repeat(40)), null);
+  assert.strictEqual(symbolForToken(null), null);
 });
 
 test('a row with no amount reads as 0, never null — the site formats it', () => {

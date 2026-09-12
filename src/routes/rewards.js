@@ -87,7 +87,9 @@ function presentPage(page) {
     //   `rows`         — the cursor-paging frontends (epoch-ms `at`)
     transactions,
     items: transactions,
-    //   `data` + `meter` — the Artificial Cat site. Its normaliser reads
+    //   `data` + `meter` — the Neko-template site (the Artificial Cat site at
+    //     BullTismClone3 does not read this endpoint at all; its ENDPOINTS map
+    //     is /token and /stats only). Its normaliser reads
     //     `json.data ?? json.rewards ?? json` and THROWS on anything that is
     //     not an array, so without `data` a perfectly healthy API renders as
     //     "Unexpected rewards payload shape".

@@ -12,6 +12,7 @@ const assert = require('node:assert');
 const OWNED = [
   'REWARD_PCT', 'BURN_PCT', 'GAS_PCT', 'TRIGGER_MODE', 'CLAIM_EVERY_USD', 'DEV_PAYOUT_ADDRESS',
   'POLL_SCHEDULE', 'TRIGGER_SCHEDULE', 'TOKEN_SYMBOL', 'MIN_HOLD',
+  'REWARD2_SHARE_PCT', 'REWARD2_TOKEN_ADDRESS', 'REWARD2_SYMBOL',
 ];
 
 function loadConfig(env = {}) {
@@ -139,4 +140,37 @@ test('the defaults match what the Artificial Cat site tells visitors', () => {
   const config = loadConfig({ DRY_RUN: 'true' });
   assert.strictEqual(config.tokenSymbol, 'ARTCAT');
   assert.strictEqual(config.minHold, 10_000);
+});
+
+
+test('the second reward leg defaults to AI at half the holders share', () => {
+  const config = loadConfig({ DRY_RUN: 'true' });
+  assert.strictEqual(config.reward2Symbol, 'AI');
+  assert.strictEqual(config.reward2TokenAddress, '0x2e8c31162b855a2ffa90f6f8634643ad6f111e18');
+  assert.strictEqual(config.reward2SharePct, 50);
+  // With REWARD_PCT=90 that is 45% of a claim as NVDA and 45% as AI.
+  assert.strictEqual(config.rewardPct, 90);
+});
+
+test('an out-of-range second share is refused, not clamped', () => {
+  assert.throws(() => loadConfig({ REWARD2_SHARE_PCT: '140', DRY_RUN: 'true' }), /REWARD2_SHARE_PCT/);
+  assert.throws(() => loadConfig({ REWARD2_SHARE_PCT: '-1', DRY_RUN: 'true' }), /REWARD2_SHARE_PCT/);
+});
+
+test('a second leg paying the quote asset is refused — that is REWARD_PCT', () => {
+  // Otherwise a copied .env quietly pays NVDA twice and the feed shows two
+  // payouts of the same token per cycle.
+  assert.throws(
+    () => loadConfig({ REWARD2_TOKEN_ADDRESS: '0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC', DRY_RUN: 'true' }),
+    /not a second reward/
+  );
+});
+
+test('the second leg can be switched off entirely', () => {
+  const config = loadConfig({ REWARD2_SHARE_PCT: '0', DRY_RUN: 'true' });
+  assert.strictEqual(config.reward2SharePct, 0);
+  // And with it off, the same address is no longer a contradiction.
+  assert.doesNotThrow(() =>
+    loadConfig({ REWARD2_SHARE_PCT: '0', REWARD2_TOKEN_ADDRESS: '0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC', DRY_RUN: 'true' })
+  );
 });

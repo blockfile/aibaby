@@ -1,11 +1,11 @@
 'use strict';
 
-// AI/USD — the price of the token holders are actually PAID in.
+// USD prices for the tokens holders are actually PAID in — one per reward leg.
 //
-// Distinct from quoteprice.js, and the distinction matters: the bot claims NVDA
-// but distributes Artificial Inu, so the running total is denominated in AI.
-// Valuing it at the NVDA price would multiply an AI amount by a tokenized
-// stock's price and overstate what holders received by orders of magnitude.
+// Distinct from quoteprice.js, and the distinction matters: holders are paid
+// NVDA and AI, and valuing an AI amount at NVDA's price would overstate what
+// they received by three orders of magnitude. Each leg is priced with its own
+// asset's price, or not at all.
 //
 // Unlike NVDA, a memecoin's pair can genuinely be missing or unpriced, so this
 // resolves to null rather than throwing. The site renders a null as "—", which
@@ -18,14 +18,27 @@ const { parsePairs } = require('./marketdata');
 
 const EMPTY = { priceUsd: null };
 
-async function fetchRewardPrice({ fetchFn = fetchJson } = {}) {
-  if (!config.rewardTokenAddress) return EMPTY;
-  const url = `https://api.dexscreener.com/latest/dex/tokens/${config.rewardTokenAddress}`;
+async function fetchPriceFor(tokenAddress, { fetchFn = fetchJson } = {}) {
+  if (!tokenAddress) return EMPTY;
+  const url = `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`;
   const data = await fetchFn(url, { headers: { accept: 'application/json' } });
-  const market = parsePairs(data, config.rewardTokenAddress, config.dexscreenerChainId);
+  const market = parsePairs(data, tokenAddress, config.dexscreenerChainId);
   return { priceUsd: typeof market.priceUsd === 'number' ? market.priceUsd : null };
 }
 
-const getRewardPrice = cached(config.marketTtlMs, fetchRewardPrice);
+/** Leg one's asset (this launch: NVDA, the asset fees arrive in). */
+async function fetchRewardPrice(opts = {}) {
+  return fetchPriceFor(config.rewardTokenAddress, opts);
+}
 
-module.exports = { getRewardPrice, fetchRewardPrice, EMPTY };
+/** Leg two's asset (AI), bought with part of the holders' share. */
+async function fetchReward2Price(opts = {}) {
+  return fetchPriceFor(config.reward2TokenAddress, opts);
+}
+
+// Cached separately: two assets, two upstream reads, and one being unlisted
+// must not blank the other.
+const getRewardPrice = cached(config.marketTtlMs, fetchRewardPrice);
+const getReward2Price = cached(config.marketTtlMs, fetchReward2Price);
+
+module.exports = { getRewardPrice, getReward2Price, fetchRewardPrice, fetchReward2Price, fetchPriceFor, EMPTY };

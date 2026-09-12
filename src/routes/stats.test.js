@@ -356,3 +356,72 @@ test('a real zero paid out stays 0 — the tile reads "0 $NVDA", not "—"', () 
   assert.strictEqual(out.nvdaDistributed, 0);
   assert.strictEqual(out.nvdaDistributedUsd, 0);
 });
+
+
+// ── Two reward assets ───────────────────────────────────────────────────────
+//
+// Holders are paid NVDA and AI. The two differ in price by three orders of
+// magnitude, so every figure has to travel with the asset it belongs to: one
+// amount, one price, one ticker in the field name.
+
+const twoAssets = (rewards, p1, p2) =>
+  buildStats({
+    market: {}, token: {}, rewards, curve: {}, quote: {},
+    rewardPrice: p1, reward2Price: p2,
+    symbol: 'ARTCAT', tokenAddress: '0xabc',
+    rewardSymbol: 'NVDA', rewardTokenAddress: '0xnvda',
+    reward2Symbol: 'AI', reward2TokenAddress: '0xai',
+  });
+
+test('each reward asset is served under its own ticker, with its own price', () => {
+  const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.strictEqual(out.nvdaDistributed, 10);
+  assert.strictEqual(out.nvdaDistributedUsd, 2210);
+  assert.strictEqual(out.aiDistributed, 7300);
+  assert.strictEqual(out.aiDistributedUsd, 2190);
+});
+
+test('valuing the AI leg at NVDA’s price is what these fields exist to prevent', () => {
+  const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.notStrictEqual(out.aiDistributedUsd, 7300 * 221, 'that would overstate it ~700x');
+  assert.strictEqual(out.aiDistributedUsd, 7300 * 0.3);
+});
+
+test('distributedUsdTotal is what holders got across both assets', () => {
+  const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.strictEqual(out.distributedUsdTotal, 2210 + 2190);
+});
+
+test('one unpriced leg does not blank the other', () => {
+  // A memecoin pair can genuinely go unlisted for a while. Reporting null for
+  // the total then would hide the NVDA that demonstrably reached holders.
+  const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, { priceUsd: 221 }, {});
+  assert.strictEqual(out.aiDistributedUsd, null);
+  assert.strictEqual(out.distributedUsdTotal, 2210);
+  assert.strictEqual(out.aiDistributed, 7300, 'the token amount is still known');
+});
+
+test('with neither leg priced the dollar total is null, not zero', () => {
+  const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, {}, {});
+  assert.strictEqual(out.distributedUsdTotal, null);
+});
+
+test('an unpaid second leg is null (the tile hides), a real zero stays 0', () => {
+  assert.strictEqual(twoAssets({ totalRewarded: 1 }, { priceUsd: 1 }, { priceUsd: 1 }).aiDistributed, null);
+  assert.strictEqual(twoAssets({ totalRewarded: 1, totalRewarded2: 0 }, { priceUsd: 1 }, { priceUsd: 1 }).aiDistributed, 0);
+});
+
+test('rewardAssets lists every asset, for a page that would rather loop', () => {
+  const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.deepStrictEqual(out.rewardAssets, [
+    { symbol: 'NVDA', tokenAddress: '0xnvda', amount: 10, amountUsd: 2210 },
+    { symbol: 'AI', tokenAddress: '0xai', amount: 7300, amountUsd: 2190 },
+  ]);
+});
+
+test('totalRewarded2 mirrors totalRewarded, for positional readers', () => {
+  const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.strictEqual(out.totalRewarded, 10);
+  assert.strictEqual(out.totalRewarded2, 7300);
+  assert.strictEqual(out.totalRewarded2Usd, 2190);
+});

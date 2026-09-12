@@ -45,11 +45,29 @@ function txUrlFor(txHash, base) {
 }
 
 /** Pure: a stored airdrop row -> the feed row the route serves. */
+/**
+ * Pure: a payout row's token address -> its ticker, or null for an asset this
+ * deployment no longer pays.
+ *
+ * The feed carries TWO assets now, so a row's amount is meaningless without it:
+ * a frontend that appends one hardcoded ticker would label AI payouts as NVDA.
+ */
+function symbolForToken(token, cfg = config) {
+  const t = String(token || '').toLowerCase();
+  if (t && t === String(cfg.reward2TokenAddress || '').toLowerCase()) return cfg.reward2Symbol;
+  if (t && t === String(cfg.rewardTokenAddress || '').toLowerCase()) return cfg.rewardSymbol;
+  return null;
+}
+
 function toRow(row, explorerTxBase = config.explorerTxBase) {
   const at = Date.parse(row.created_at);
   return {
     id: String(row.id),
     wallet: row.recipient,
+    // Which asset this payout was. See symbolForToken: without it a two-asset
+    // feed shows bare numbers under whatever ticker the page happens to print.
+    symbol: symbolForToken(row.reward_token),
+    token: row.reward_token ?? null,
     // The site formats this and appends its own ticker. 0 rather than null: an
     // amount is always known for a payout that actually happened.
     amount: row.amount_ui ?? 0,
@@ -77,4 +95,4 @@ async function fetchFeedPage({ cursor = null, limit }) {
 const pages = cachedByKey(config.feedTtlMs, (cursor, limit) => fetchFeedPage({ cursor, limit }));
 const getFeedPage = (cursor, limit) => pages(`${cursor ?? ''}|${limit}`, cursor, limit);
 
-module.exports = { getFeedPage, fetchFeedPage, parseCursor, toRow, txUrlFor, EMPTY_PAGE };
+module.exports = { getFeedPage, fetchFeedPage, parseCursor, toRow, txUrlFor, symbolForToken, EMPTY_PAGE };

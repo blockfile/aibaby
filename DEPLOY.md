@@ -146,6 +146,13 @@ QUOTE_SYMBOL=NVDA
 REWARD_TOKEN_ADDRESS=0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC
 REWARD_SYMBOL=NVDA
 
+# The SECOND reward asset. Holders are paid both: half the holders' share stays
+# NVDA, half buys AI and is airdropped as AI. Already correct — the pool keys
+# derive the ~$6.7M NVDA/AI v4 pool. REWARD2_SHARE_PCT=0 turns the leg off.
+REWARD2_TOKEN_ADDRESS=0x2E8c31162b855A2ffa90F6F8634643Ad6F111e18
+REWARD2_SYMBOL=AI
+REWARD2_SHARE_PCT=50
+
 # The swap router is shared and safe to share: it never touches holders, and
 # its output goes straight from the PoolManager to the wallet, so it does not
 # appear in any token's transfer graph.
@@ -424,6 +431,13 @@ curl -s https://api.artificialcat.meme/stats | head -c 200
   read in a quiet cycle.
 - **`MIN_HOLD`.** 10,000 ARTCAT, matching what the site advertises. Lowering it
   toward 1 pays dust to nearly every wallet and multiplies per-cycle gas.
+- **Two reward assets means two payout passes.** Every cycle airdrops NVDA and
+  then AI, so the transfer count per cycle doubles while `GAS_PCT` stays at 10.
+  With `DISPERSE_ADDRESS` set that is 2 batch transactions per 30 holders rather
+  than 1, which is modest — but watch the wallet's ETH over the first few cycles.
+  If it trends down, raise `GAS_PCT` (and lower `REWARD_PCT` to match) or set
+  `REWARD2_SHARE_PCT=0` to fall back to one asset. Below `GAS_RESERVE_ETH` a
+  cycle refuses to start rather than claiming and failing to pay.
 - **A quiet twenty minutes is not a symptom.** Distributions land on
   `TRIGGER_SCHEDULE` (default hourly, on the hour), not whenever the tank fills.
   A gauge sitting at 100% between trigger ticks is the design, not a stall — the

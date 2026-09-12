@@ -13,7 +13,9 @@ ARTCAT trades  →  creator fees accrue on-chain, denominated in NVDA
       ↓  sweep              push pending fees into the pons fee escrow
       ↓  claimToken(NVDA)   withdraw the escrow → the bot's wallet
       ├─ 10% → sell for native ETH, so the bot can pay its own gas
-      ├─ 90% → airdrop NVDA pro-rata to ARTCAT holders
+      ├─ 90% → to holders, pro-rata, in TWO assets (REWARD2_SHARE_PCT=50):
+      │        ├─ 45% airdropped as NVDA — no swap, fees already arrive in it
+      │        └─ 45% buys AI in the NVDA/AI v4 pool, and that AI is airdropped
       ├─  0% → buyback + burn: BUILT, but not funded (BURN_PCT=0)
       └─  0% → dev cut: whatever the other three leave (none at 90/0/10)
 ```
@@ -22,8 +24,8 @@ The gas leg runs **first**. The airdrop that follows sends one transaction per
 holder, so topping up beforehand is what stops a cycle running dry halfway
 through paying people.
 
-**The reward leg never swaps.** Fees arrive already denominated in NVDA, which
-is exactly what holders are paid — so slippage, quoting and venue dispatch exist
+**Leg one never swaps.** Fees arrive already denominated in NVDA, which is
+exactly what half the holders' share is paid in — so slippage, quoting and venue dispatch exist
 only for the buyback, and a bad swap can never strand a holder payout.
 
 **The buyback is off by choice, not missing.** `BURN_PCT=0`, so every NVDA
@@ -307,7 +309,10 @@ Everything is documented in `.env.example`. The ones worth knowing first:
 | `CLAIM_EVERY_USD` | `100` | fire once the accrued NVDA is worth this |
 | `POLL_SCHEDULE` | `* * * * *` | how often the chain is read and the gauge written; never pays |
 | `TRIGGER_SCHEDULE` | `0 * * * *` | when a distribution may happen — `*/30 * * * *` for every half hour |
-| `REWARD_PCT` | `90` | share airdropped to holders |
+| `REWARD_PCT` | `90` | share of a claim that reaches holders, in either asset |
+| `REWARD2_SHARE_PCT` | `50` | how much of that share is paid as AI rather than NVDA |
+| `REWARD2_TOKEN_ADDRESS` | AI `0x2e8c…1e18` | the second reward asset |
+| `REWARD2_POOL_*` | the \$6.7M NVDA/AI v4 pool | where the AI is bought |
 | `BURN_PCT` | `0` | share used to buy ARTCAT and burn it — **off by default here** |
 | `GAS_PCT` | `10` | share sold for ETH to fund the bot's own gas |
 | `GAS_CEILING_ETH` | `0` | stop converting above this ETH balance (0 = never) |

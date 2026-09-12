@@ -20,7 +20,7 @@ const { getTokenInfo } = require('../services/holders');
 const { getRewards } = require('../services/rewards');
 const { getCurveMarket } = require('../services/curvemarket');
 const { getQuotePrice } = require('../services/quoteprice');
-const { getRewardPrice } = require('../services/rewardprice');
+const { getRewardPrice, getReward2Price } = require('../services/rewardprice');
 const { getBurns } = require('../services/burns');
 const { getCreatorFees } = require('../services/creatorfees');
 
@@ -110,11 +110,35 @@ function withSupplyFallback(token, fallback) {
  * once the explorer has an exchange rate), then the bonding-curve computation
  * — so the tile shows a real number at every stage of the token's life.
  */
-function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, curve = {}, quote = {}, rewardPrice = {}, creatorFees = {}, symbol, tokenAddress, supply = null }) {
+function buildStats({
+  market,
+  token: explorerToken,
+  rewards = {},
+  burns = {},
+  curve = {},
+  quote = {},
+  rewardPrice = {},
+  reward2Price = {},
+  creatorFees = {},
+  symbol,
+  tokenAddress,
+  supply = null,
+  reward2Symbol = 'AI',
+  reward2TokenAddress = null,
+  rewardSymbol = 'NVDA',
+  rewardTokenAddress = null,
+}) {
   const token = withSupplyFallback(explorerToken, supply);
   const priceUsd = market.priceUsd ?? curve.priceUsd ?? null;
   const totalRewarded = rewards.totalRewarded ?? null; // NVDA token amount
   const totalRewardedUsd = rewardedUsd(rewards, rewardPrice);
+  // Leg two: the AI bought with half the holders' share and airdropped. Its own
+  // amount and its own price — valuing an AI amount at NVDA's price would
+  // overstate it by three orders of magnitude.
+  const totalRewarded2 = rewards.totalRewarded2 ?? null;
+  const totalRewarded2Usd = rewardedUsd({ totalRewarded: totalRewarded2 }, reward2Price);
+  const sumUsd = (a, b) =>
+    typeof a !== 'number' && typeof b !== 'number' ? null : (typeof a === 'number' ? a : 0) + (typeof b === 'number' ? b : 0);
   const holders = token.holders ?? null;
   const marketCap = market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token);
   return {
@@ -128,6 +152,25 @@ function buildStats({ market, token: explorerToken, rewards = {}, burns = {}, cu
     marketCapUsd: marketCap,
     nvdaDistributed: totalRewarded,
     nvdaDistributedUsd: totalRewardedUsd,
+    // ── The SECOND reward asset ───────────────────────────────────────────
+    // Served under its own ticker (`aiDistributed`, `aiDistributedUsd`) beside
+    // the NVDA pair above, so a page renders one tile per asset and neither
+    // number is ever printed under the other's name.
+    // `totalRewarded2` mirrors `totalRewarded` above, for a caller that reads the
+    // legs positionally rather than by ticker.
+    totalRewarded2,
+    totalRewarded2Usd,
+    [`${reward2Symbol.toLowerCase()}Distributed`]: totalRewarded2,
+    [`${reward2Symbol.toLowerCase()}DistributedUsd`]: totalRewarded2Usd,
+    // Everything holders were paid, in dollars, across both assets — the one
+    // figure that is comparable between them. Null only when neither leg has a
+    // price; a priced leg plus an unpriced one is the priced leg, not null.
+    distributedUsdTotal: sumUsd(totalRewardedUsd, totalRewarded2Usd),
+    // The whole set, for a page that would rather loop than hardcode tickers.
+    rewardAssets: [
+      { symbol: rewardSymbol, tokenAddress: rewardTokenAddress, amount: totalRewarded, amountUsd: totalRewardedUsd },
+      { symbol: reward2Symbol, tokenAddress: reward2TokenAddress, amount: totalRewarded2, amountUsd: totalRewarded2Usd },
+    ].filter((a) => a.symbol),
     // The Neko-template site (tokenmeme15) reads these two first and falls back
     // to the camelCase names; serving both means a frontend rename cannot break it.
     market_cap_usd: marketCap,
@@ -194,8 +237,17 @@ router.get('/stats', async (req, res, next) => {
   try {
     // Independent upstreams — one being down must not delay or fail the other,
     // so all settle and a rejection degrades to nulls for its own fields only.
-    const [marketResult, tokenResult, rewardsResult, burnsResult, curveResult, quoteResult, rewardPriceResult, feesResult] =
-      await Promise.allSettled([
+    const [
+      marketResult,
+      tokenResult,
+      rewardsResult,
+      burnsResult,
+      curveResult,
+      quoteResult,
+      rewardPriceResult,
+      reward2PriceResult,
+      feesResult,
+    ] = await Promise.allSettled([
         getMarketData(),
         getTokenInfo(),
         getRewards(),
@@ -203,6 +255,7 @@ router.get('/stats', async (req, res, next) => {
         getCurveMarket(),
         getQuotePrice(),
         getRewardPrice(),
+        getReward2Price(),
         getCreatorFees(),
       ]);
 
@@ -213,6 +266,7 @@ router.get('/stats', async (req, res, next) => {
     const curve = curveResult.status === 'fulfilled' ? curveResult.value : {};
     const quote = quoteResult.status === 'fulfilled' ? quoteResult.value : {};
     const rewardPrice = rewardPriceResult.status === 'fulfilled' ? rewardPriceResult.value : {};
+    const reward2Price = reward2PriceResult.status === 'fulfilled' ? reward2PriceResult.value : {};
     const creatorFees = feesResult.status === 'fulfilled' ? feesResult.value : {};
 
     if (marketResult.status === 'rejected') {
@@ -236,6 +290,9 @@ router.get('/stats', async (req, res, next) => {
     if (rewardPriceResult.status === 'rejected') {
       console.warn('[artificialcat] AI price unavailable:', rewardPriceResult.reason?.message);
     }
+    if (reward2PriceResult.status === 'rejected') {
+      console.warn(`[artificialcat] ${config.reward2Symbol} price unavailable:`, reward2PriceResult.reason?.message);
+    }
     if (feesResult.status === 'rejected') {
       console.warn('[artificialcat] creator-fee total unavailable:', feesResult.reason?.message);
     }
@@ -253,6 +310,11 @@ router.get('/stats', async (req, res, next) => {
         symbol: config.tokenSymbol,
         tokenAddress: config.tokenAddress,
         supply: supplyFallback(config),
+        reward2Price,
+        rewardSymbol: config.rewardSymbol,
+        rewardTokenAddress: config.rewardTokenAddress,
+        reward2Symbol: config.reward2Symbol,
+        reward2TokenAddress: config.reward2SharePct > 0 ? config.reward2TokenAddress : null,
       })
     );
   } catch (err) {

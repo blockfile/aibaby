@@ -34,7 +34,7 @@ const { claimQuoteFromEscrow } = require('../evm/escrow');
 const { getDecimals, getTokenSupplyRaw } = require('../evm/erc20');
 const { snapshotEligibleHolders } = require('../evm/holders');
 const { buildExcludeSet } = require('../evm/exclude');
-const { buyReward } = require('../evm/rewardswap');
+const { buyReward, rewardLegOne, rewardLegTwo } = require('../evm/rewardswap');
 const { computeWeightedAllocations } = require('../services/distribution');
 const { airdropToken } = require('../evm/airdrop');
 const { toUnitString } = require('../evm/units');
@@ -135,6 +135,11 @@ function recordFeeRecipientCheck(launch, address) {
  * testable — they look identical in `sent` (0) and must not be recorded
  * identically. One is a quiet no-op; the other means the NVDA is stranded.
  */
+/** Pure: "NVDA + AI" for a cycle's legs — for log lines and failure notes. */
+function legNames(reward) {
+  return (reward.legs || []).map((l) => l.symbol).join(' + ');
+}
+
 function summarizeReward(reward) {
   if (reward.skipped) {
     return { status: 'complete', note: `reward leg skipped: ${reward.reason}` };
@@ -147,20 +152,79 @@ function summarizeReward(reward) {
       status: 'failed',
       note: `airdrop reached 0 of ${reward.recipients} recipients`,
       error:
-        `airdrop delivered nothing: 0 of ${reward.recipients} recipients received NVDA ` +
-        `(${reward.failed} failed). Likely causes: the wallet is out of ETH for gas, NVDA is ` +
-        'paused, or DISPERSE_ADDRESS points at something that is not an ERC-20 disperser. ' +
-        'The NVDA claimed this cycle is still sitting in the wallet.',
+        `airdrop delivered nothing: 0 of ${reward.recipients} recipients received ` +
+        `${legNames(reward) || 'a reward'} (${reward.failed} failed). Likely causes: the wallet ` +
+        'is out of ETH for gas, a reward token is paused, or DISPERSE_ADDRESS points at ' +
+        'something that is not an ERC-20 disperser. What this cycle claimed is still in the wallet.',
     };
   }
+  const assets = legNames(reward);
+  const suffix = assets ? ` (${assets})` : '';
   if (reward.failed > 0) {
-    return { status: 'complete', note: `airdrop sent ${reward.sent}, ${reward.failed} failed` };
+    return { status: 'complete', note: `airdrop sent ${reward.sent}, ${reward.failed} failed${suffix}` };
   }
-  return { status: 'complete', note: `airdrop sent ${reward.sent}` };
+  return { status: 'complete', note: `airdrop sent ${reward.sent}${suffix}` };
 }
 
-/** Airdrop `quoteAmount` of NVDA pro-rata to eligible holders of the fee token. */
-async function runRewardLeg(cycleId, { launch, quoteAmount }) {
+/**
+ * Pure: divide the holders' share between the two reward assets.
+ *
+ * The second leg takes its percentage and the FIRST takes the remainder, so the
+ * two always re-add to the share exactly. The other way round leaves a rounding
+ * step of every claim unspent in the wallet, cycle after cycle.
+ */
+function splitRewardQuote(rewardQuote, sharePct = config.reward2SharePct) {
+  const round = (n) => {
+    const r = +n.toFixed(9);
+    return r === 0 ? 0 : r;
+  };
+  const second = round(rewardQuote * (sharePct / 100));
+  return { first: round(rewardQuote - second), second };
+}
+
+/**
+ * The legs to pay this cycle: [{reward, quoteAmount}], zero-value legs dropped.
+ *
+ * Leg one is the quote asset and needs no swap; leg two is bought. A share of 0,
+ * or no second token configured, gives exactly the single-asset cycle this
+ * project ran before — the second reward is a default, not a new code path.
+ */
+function rewardLegPlan(rewardQuote, sharePct = config.reward2SharePct) {
+  const { first, second } = splitRewardQuote(rewardQuote, sharePct);
+  const plan = [{ reward: rewardLegOne(), quoteAmount: first }];
+  if (sharePct > 0 && config.reward2TokenAddress) {
+    plan.push({ reward: rewardLegTwo(), quoteAmount: second });
+  }
+  return plan.filter((leg) => leg.quoteAmount > 0);
+}
+
+/** Pure: a leg's result row, zeroed, filled in as the leg progresses. */
+function legResult(reward, quoteAmount) {
+  return {
+    leg: reward.leg,
+    symbol: reward.symbol,
+    tokenAddress: reward.tokenAddress,
+    quoteAmount,
+    bought: 0,
+    quoteSpent: 0,
+    recipients: 0,
+    sent: 0,
+    failed: 0,
+  };
+}
+
+/**
+ * Pay every eligible holder, in each configured reward asset.
+ *
+ * The holder snapshot is taken ONCE and both legs allocate against it, so the
+ * two payouts reach the same holders in the same proportions — and the expensive
+ * part, deriving the holder list, is not paid for twice.
+ *
+ * A leg that delivers nothing does not stop the next one: they are separate
+ * assets out of separate pools, and a dead AI pool must not cost holders the
+ * NVDA they were already owed.
+ */
+async function runRewardLegs(cycleId, { launch, quoteAmount }) {
   const log = (m) => console.log(`[cycle ${cycleId}] [reward] ${m}`);
 
   // MIN_HOLD is a whole-token figure; scale it by the TOKEN's own decimals
@@ -181,62 +245,99 @@ async function runRewardLeg(cycleId, { launch, quoteAmount }) {
   const capPct = config.rewardCapPct > 0 ? config.rewardCapPct : null;
   const supplyRaw = capPct == null ? null : (await getTokenSupplyRaw(launch.token)).toString();
 
-  // BUY THE REWARD FIRST. Fees arrive as NVDA and holders are paid in
-  // Artificial Inu, so a cycle cannot distribute what it has not yet bought.
-  // The amount airdropped is what the swap ACTUALLY returned, never the quoted
-  // figure: the pool's hook takes its cut after the swap, so distributing a
-  // quote would allocate more than the wallet holds and revert the last batch.
-  const buy = await buyReward({ quoteAmount });
-  await repo.addStep({
-    cycleId,
-    name: 'reward-swap',
-    status: buy.bought ? 'ok' : buy.skipped ? 'skipped' : 'failed',
-    signature: buy.signature,
-    detail: {
-      quoteSpent: buy.quoteSpent,
-      tokensBought: buy.tokensBought,
-      rewardToken: config.rewardTokenAddress,
-      ...(buy.reason ? { reason: buy.reason } : {}),
-    },
-  });
-  if (!buy.bought) {
-    log(`no reward bought (${buy.reason || 'swap returned nothing'}) — nothing to distribute`);
-    return { recipients: 0, sent: 0, failed: 0, skipped: true, eligibleHolders: holders.length, totalHolders, rewardBought: 0 };
+  const plan = rewardLegPlan(quoteAmount);
+  if (plan.length === 0) {
+    const reason = 'reward share of this claim is zero';
+    return { recipients: 0, sent: 0, failed: 0, skipped: true, reason, eligibleHolders: holders.length, totalHolders, legs: [] };
   }
-  log(`bought ${buy.tokensBought} ${config.rewardSymbol} for ${buy.quoteSpent} ${config.quoteSymbol}`);
+  log(`paying ${plan.map((l) => `${l.quoteAmount} ${config.quoteSymbol} as ${l.reward.symbol}`).join(' + ')}`);
 
-  // The airdrop is denominated in the REWARD token's base units.
-  const totalRaw = buy.boughtRaw;
-  const allocations = computeWeightedAllocations(holders, totalRaw.toString(), {
-    capPct,
-    supplyRaw,
-    clusters: config.clusters,
-  });
+  const legs = [];
+  for (const { reward, quoteAmount: legQuote } of plan) {
+    // BUY THE REWARD FIRST — a cycle cannot distribute what it has not bought.
+    // The amount airdropped is what the swap ACTUALLY returned, never the quoted
+    // figure: the pool's hook takes its cut after the swap, so distributing a
+    // quote would allocate more than the wallet holds and revert the last batch.
+    // For the quote asset itself this hands the claim back untouched, no swap.
+    const buy = await buyReward({ quoteAmount: legQuote, reward });
+    await repo.addStep({
+      cycleId,
+      name: 'reward-swap',
+      status: buy.bought ? 'ok' : buy.skipped ? 'skipped' : 'failed',
+      signature: buy.signature,
+      detail: {
+        leg: reward.leg,
+        symbol: reward.symbol,
+        quoteSpent: buy.quoteSpent,
+        tokensBought: buy.tokensBought,
+        rewardToken: reward.tokenAddress,
+        direct: buy.direct === true,
+        ...(buy.reason ? { reason: buy.reason } : {}),
+      },
+    });
+    if (!buy.bought) {
+      const reason = buy.reason || 'swap returned nothing';
+      log(`${reward.symbol}: nothing to distribute (${reason})`);
+      legs.push({ ...legResult(reward, legQuote), skipped: true, reason });
+      continue;
+    }
+    log(
+      buy.direct
+        ? `${reward.symbol}: ${buy.tokensBought} claimed directly, no swap needed`
+        : `${reward.symbol}: bought ${buy.tokensBought} for ${buy.quoteSpent} ${config.quoteSymbol}`
+    );
 
-  const air = await airdropToken({ rewardToken: config.rewardTokenAddress, allocations, cycleId });
-  await repo.addStep({
-    cycleId,
-    name: 'airdrop',
-    status: air.failed ? 'failed' : 'ok',
-    detail: {
-      token: config.rewardTokenAddress,
-      quoteAmount,
-      rewardAmount: buy.tokensBought,
+    // The airdrop is denominated in THIS leg's token base units.
+    const allocations = computeWeightedAllocations(holders, buy.boughtRaw.toString(), {
+      capPct,
+      supplyRaw,
+      clusters: config.clusters,
+    });
+
+    const air = await airdropToken({ rewardToken: reward.tokenAddress, allocations, cycleId });
+    await repo.addStep({
+      cycleId,
+      name: 'airdrop',
+      status: air.failed ? 'failed' : 'ok',
+      detail: {
+        leg: reward.leg,
+        symbol: reward.symbol,
+        token: reward.tokenAddress,
+        quoteAmount: legQuote,
+        rewardAmount: buy.tokensBought,
+        recipients: allocations.length,
+        sent: air.sent,
+        failed: air.failed,
+      },
+    });
+    log(`airdrop ${reward.symbol} sent=${air.sent} failed=${air.failed}`);
+
+    legs.push({
+      ...legResult(reward, legQuote),
+      bought: buy.tokensBought,
+      quoteSpent: buy.quoteSpent,
       recipients: allocations.length,
       sent: air.sent,
       failed: air.failed,
-    },
-  });
-  log(`airdrop ${config.rewardSymbol} sent=${air.sent} failed=${air.failed}`);
+    });
+  }
 
+  const paid = legs.filter((l) => !l.skipped);
   return {
-    recipients: allocations.length,
-    sent: air.sent,
-    failed: air.failed,
+    // Both legs pay the SAME holders, so this is how many holders were reached.
+    // Summing across legs would report twice the holder count.
+    recipients: paid.length ? Math.max(...paid.map((l) => l.recipients)) : 0,
+    // Transfers, which IS a sum: each leg is its own set of payout transactions.
+    sent: legs.reduce((n, l) => n + l.sent, 0),
+    failed: legs.reduce((n, l) => n + l.failed, 0),
+    skipped: paid.length === 0,
+    ...(paid.length === 0 ? { reason: legs.map((l) => `${l.symbol}: ${l.reason}`).join('; ') } : {}),
     eligibleHolders: holders.length,
     totalHolders,
-    rewardBought: buy.tokensBought,
-    quoteSpent: buy.quoteSpent,
+    quoteSpent: legs.reduce((n, l) => n + l.quoteSpent, 0),
+    // Deliberately no single "rewardBought": the legs are different assets, and
+    // adding NVDA to AI would be a number that means nothing.
+    legs,
   };
 }
 
@@ -330,10 +431,11 @@ async function runCycle() {
     });
     log(describeGasSwap(gas));
 
-    // 4. Reward leg — airdrop the claimed NVDA directly. Nothing is bought.
+    // 4. Reward legs — pay the holders' share in each configured asset: NVDA
+    //    straight through, and AI bought with its share of it first.
     let reward = { skipped: false, sent: 0, failed: 0, recipients: 0, eligibleHolders: 0, totalHolders: 0 };
     if (rewardQuote > 0) {
-      reward = { skipped: false, ...(await runRewardLeg(id, { launch, quoteAmount: rewardQuote })) };
+      reward = { skipped: false, ...(await runRewardLegs(id, { launch, quoteAmount: rewardQuote })) };
     } else {
       const reason = 'reward share of this claim is zero';
       reward = { ...reward, skipped: true, reason };
@@ -416,7 +518,10 @@ async function runCycle() {
 
 module.exports = {
   runCycle,
-  runRewardLeg,
+  runRewardLegs,
+  splitRewardQuote,
+  rewardLegPlan,
+  legNames,
   splitClaim,
   summarizeReward,
   isFeeRecipientOk,

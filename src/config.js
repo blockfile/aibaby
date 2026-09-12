@@ -103,6 +103,24 @@ if (rewardPct + burnPct + gasPct > 100) {
 // (100 - 80.1 is 19.900000000000006 in FP).
 const devPct = +(100 - rewardPct - burnPct - gasPct).toFixed(6);
 
+// ── The holders' share is paid in TWO assets ─────────────────────────────────
+// REWARD_PCT decides how much of a claim reaches holders. This decides what it
+// reaches them AS: this percentage OF THE HOLDERS' SHARE is swapped for the
+// second reward token and airdropped as that, and the remainder is paid in the
+// quote asset with no swap at all.
+//
+// At the default 90/0/10 with a 50% share, a 100 NVDA claim pays 45 NVDA, plus
+// whatever AI 45 NVDA buys, and 10 funds gas. It is a share of the holders' cut
+// rather than a fourth leg of the claim on purpose: REWARD_PCT then remains the
+// single answer to "how much of a claim reaches holders", whatever it is paid in.
+//
+// 0 turns the second leg off and the cycle behaves exactly as it did with one
+// reward. Both legs pay the SAME holders in the same proportions.
+const reward2SharePct = num(process.env.REWARD2_SHARE_PCT, 50);
+if (!(reward2SharePct >= 0 && reward2SharePct <= 100)) {
+  throw new Error(`invalid split: REWARD2_SHARE_PCT(${reward2SharePct}) must be within [0, 100]`);
+}
+
 // Accumulation is the default: this launch's fees are worth hundreds of dollars
 // per token, so firing on every tick would pay gas to move dust.
 const triggerMode = ['interval', 'accumulation', 'token'].includes(String(process.env.TRIGGER_MODE || '').toLowerCase())
@@ -235,6 +253,31 @@ const config = {
   rewardPoolHooks: lowerOr(process.env.REWARD_POOL_HOOKS, '0x4e3468951d49f2eea976ed0d6e75ffcb44a9a544'),
   rewardsTtlMs: num(process.env.REWARDS_TTL_MS, 60_000),
 
+  // ── Second reward: Artificial Inu (AI), BOUGHT with part of the holders' cut
+  // Unlike leg one, this asset is NOT what fees arrive in, so every cycle has
+  // to buy it before it can pay it — through the NVDA/AI Uniswap v4 pool below.
+  //
+  // Verified on chain 2026-09-12: 0x2e8c… is "Artificial Inu" (AI, 18 decimals,
+  // ~42k holders) and the pool key here derives pool id
+  // 0xcbdfea90…f2f1ce27, which DexScreener reports holding ~$6.7M — the deepest
+  // NVDA/AI venue by far. The only AI/NVDA v3 pool holds ~$1k, so the pool key
+  // matters: routing through the wrong one would pay holders whatever a
+  // thousand-dollar pool gives back.
+  //
+  // The pool is HOOKED (Doppler's), so the swap goes through V4Buyer rather
+  // than the UniversalRouter — see src/evm/rewardswap.js for why the router
+  // cannot settle an ERC-20 into a hooked pool on this chain.
+  reward2TokenAddress: lowerOrNull(process.env.REWARD2_TOKEN_ADDRESS) || '0x2e8c31162b855a2ffa90f6f8634643ad6f111e18',
+  reward2Decimals: num(process.env.REWARD2_DECIMALS, 18),
+  reward2Symbol: process.env.REWARD2_SYMBOL || 'AI',
+  reward2SharePct,
+  reward2PoolFee: num(process.env.REWARD2_POOL_FEE, 8388608),
+  reward2PoolTickSpacing: num(process.env.REWARD2_POOL_TICK_SPACING, 8),
+  reward2PoolHooks: lowerOr(process.env.REWARD2_POOL_HOOKS, '0x4e3468951d49f2eea976ed0d6e75ffcb44a9a544'),
+  // A floor on the swap, in basis points. A memecoin pool moves more than a
+  // tokenized stock's, so this is its own value rather than SLIPPAGE_PCT.
+  reward2SlippageBps: num(process.env.REWARD2_SLIPPAGE_BPS, 300),
+
   // ── Rewards feed (GET /rewards) ────────────────────────────────────────────
   // Every payout is one this bot made, read straight from its own ledger (see
   // src/services/rewardsfeed.js). There is no DISTRIBUTOR_ADDRESS here on
@@ -346,6 +389,22 @@ const config = {
 //
 // server.js requires this module and must never need a key — it loads no EVM
 // code and signs nothing. Resolving eagerly made `require('./config')` throw
+// A second leg paying the asset the fees already arrive in is not a second
+// reward — it is REWARD_PCT with extra steps, and it would show up as two
+// payouts of the same token in the feed. Refuse it rather than let a copied
+// .env quietly do that.
+if (config.reward2SharePct > 0) {
+  if (!config.reward2TokenAddress) {
+    throw new Error('REWARD2_SHARE_PCT > 0 needs REWARD2_TOKEN_ADDRESS — there is no second asset to pay');
+  }
+  if (config.reward2TokenAddress === config.quoteTokenAddress) {
+    throw new Error(
+      'REWARD2_TOKEN_ADDRESS is the quote asset: that is not a second reward, it is REWARD_PCT. ' +
+        'Point it at a different token or set REWARD2_SHARE_PCT=0'
+    );
+  }
+}
+
 // whenever WALLET_PRIVATE_KEY was unset with DRY_RUN=false, which crash-looped
 // the public API over a key it never uses, and quietly defeated the point of
 // running the bot as a separate process.

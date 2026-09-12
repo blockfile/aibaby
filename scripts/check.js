@@ -190,7 +190,20 @@ async function disperserSection() {
 async function main() {
   hr('CONFIG');
   console.log(`  token      : ${config.tokenSymbol} ${config.tokenAddress || '(TOKEN_ADDRESS not set)'}`);
-  console.log(`  reward     : NVDA ${config.quoteTokenAddress} (${config.quoteDecimals} decimals)`);
+  const legTwoOn = config.reward2SharePct > 0 && config.reward2TokenAddress;
+  const holdersPct = config.rewardPct;
+  const legOnePct = +(holdersPct * (1 - config.reward2SharePct / 100)).toFixed(6);
+  const legTwoPct = +(holdersPct * (config.reward2SharePct / 100)).toFixed(6);
+  console.log(
+    `  reward 1   : ${config.rewardSymbol} ${config.rewardTokenAddress} ` +
+      `(${legOnePct}% of a claim, paid directly — no swap)`
+  );
+  console.log(
+    legTwoOn
+      ? `  reward 2   : ${config.reward2Symbol} ${config.reward2TokenAddress} ` +
+          `(${legTwoPct}% of a claim, BOUGHT through pool ${require('../src/evm/rewardswap').poolIdOf(require('../src/evm/rewardswap').rewardPoolKey(require('../src/evm/rewardswap').rewardLegTwo())).slice(0, 12)}…)`
+      : '  reward 2   : off (REWARD2_SHARE_PCT=0) — holders are paid one asset'
+  );
   console.log(`  explorer   : ${config.explorerApi}`);
   console.log(`  dexscreener: chain "${config.dexscreenerChainId}"`);
   console.log(`  pons api   : ${config.ponsApi}`);
@@ -272,9 +285,16 @@ async function main() {
   else if (curve.value.priceUsd === null) console.log('  no curve price (no trades, or NVDA unlisted)');
   else console.log(`  priceUsd   : ${curve.value.priceUsd}`);
 
-  hr('OUR LEDGER (total NVDA rewarded)');
+  hr('OUR LEDGER (total rewarded, per asset)');
   if (rewards.status === 'rejected') console.log(`  FAILED: ${rewards.reason.message}`);
-  else console.log(`  totalRewarded: ${show(rewards.value.totalRewarded)} NVDA (real payouts only)`);
+  else {
+    console.log(`  ${config.rewardSymbol.padEnd(6)}: ${show(rewards.value.totalRewarded)} paid to holders (real payouts only)`);
+    console.log(
+      rewards.value.totalRewarded2 === null
+        ? '  (no second reward asset configured)'
+        : `  ${config.reward2Symbol.padEnd(6)}: ${show(rewards.value.totalRewarded2)} paid to holders (real payouts only)`
+    );
+  }
 
   hr('OUR LEDGER (buyback + burn)');
   if (burns.status === 'rejected') console.log(`  FAILED: ${burns.reason.message}`);

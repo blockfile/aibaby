@@ -19,6 +19,8 @@ process.env.WALLET_PRIVATE_KEY = '';
 const test = require('node:test');
 const assert = require('node:assert');
 const { MongoMemoryServer } = require('mongodb-memory-server');
+const { parseUnits } = require('ethers');
+const { toUnitString } = require('../evm/units');
 
 let mongod;
 let db;
@@ -66,15 +68,40 @@ test('a funded vault claims, splits and airdrops to holders', async () => {
   assert.strictEqual(cycle.quote_gas, 1, '10% is sold for gas');
 
   const names = cycle.steps.map((s) => s.name);
-  // Gas comes BEFORE the airdrop: the airdrop sends one transaction per holder,
-  // so the top-up has to land first or a cycle can run dry mid-payout.
-  // reward-swap sits between the gas leg and the airdrop: holders are paid in
-  // Artificial Inu, so a cycle must BUY the reward before it can distribute it.
-  assert.deepStrictEqual(names, ['sweep', 'claim', 'gas', 'reward-swap', 'airdrop', 'buyback', 'dev']);
+  // Gas comes BEFORE the airdrops: they send transactions per holder, so the
+  // top-up has to land first or a cycle can run dry mid-payout.
+  //
+  // reward-swap/airdrop appear TWICE, once per reward asset. The holders' share
+  // is paid half as NVDA — which needs no swap, the fees arrive in it — and half
+  // as AI, which has to be bought first.
+  assert.deepStrictEqual(names, [
+    'sweep', 'claim', 'gas',
+    'reward-swap', 'airdrop',
+    'reward-swap', 'airdrop',
+    'buyback', 'dev',
+  ]);
 
-  const airdropStep = cycle.steps.find((s) => s.name === 'airdrop');
-  assert.strictEqual(airdropStep.status, 'ok');
-  assert.ok(airdropStep.detail.sent > 0, 'the simulated holders were paid');
+  const swaps = cycle.steps.filter((s) => s.name === 'reward-swap');
+  assert.deepStrictEqual(
+    swaps.map((s) => s.detail.symbol),
+    [config.rewardSymbol, config.reward2Symbol],
+    'one leg per asset, in order'
+  );
+  assert.strictEqual(swaps[0].detail.direct, true, 'the quote asset is handed over, not swapped');
+  assert.strictEqual(swaps[1].detail.direct, false, 'AI is bought');
+  assert.ok(swaps[1].detail.tokensBought > 0);
+
+  const airdrops = cycle.steps.filter((s) => s.name === 'airdrop');
+  assert.strictEqual(airdrops.length, 2);
+  for (const a of airdrops) {
+    assert.strictEqual(a.status, 'ok');
+    assert.ok(a.detail.sent > 0, `the simulated holders were paid ${a.detail.symbol}`);
+  }
+  assert.strictEqual(
+    airdrops[0].detail.quoteAmount + airdrops[1].detail.quoteAmount,
+    6.5,
+    "the two legs together spend the whole holders' share"
+  );
 });
 
 test('the buyback buys ARTCAT with the burn share and destroys it', async () => {
@@ -94,10 +121,19 @@ test('the buyback is NOT a holder payout and never reaches the rewards feed', as
   simvault.reset(10);
   const cycle = await runCycle();
   const air = await db.getDb().collection('airdrops').find({ cycle_id: cycle.id }).toArray();
-  // Holders are paid the SAME asset the fees arrive in, so the reward share is
-  // handed over as-is: no swap, and nothing lost to a fee or slippage on the way.
-  const paid = air.reduce((s, r) => s + (r.amount_ui || 0), 0);
-  assert.ok(Math.abs(paid - 6.5) < 1e-9, 'holders got the 65%, with the burn and gas shares excluded');
+  // Per ASSET: adding an NVDA row to an AI row would be adding two different
+  // things, and a total that means nothing could hide a shortfall in either.
+  const paidIn = (token) =>
+    air
+      .filter((r) => r.reward_token.toLowerCase() === token.toLowerCase())
+      .reduce((n, r) => n + (r.amount_ui || 0), 0);
+
+  assert.ok(Math.abs(paidIn(config.rewardTokenAddress) - 3.25) < 1e-9, 'half the 65% went out as NVDA');
+  assert.ok(paidIn(config.reward2TokenAddress) > 0, 'and the other half as AI');
+  assert.ok(
+    !air.some((r) => r.reward_token.toLowerCase() === config.tokenAddress.toLowerCase()),
+    'the ARTCAT bought for the burn is never recorded as a holder payout'
+  );
 });
 
 test('with BURN_PCT and GAS_PCT at 0, holders take everything', async () => {
@@ -160,8 +196,14 @@ test('a dev remainder is forwarded, and stays out of the public feed', async () 
     !air.some((r) => String(r.recipient).toLowerCase() === '0xc8f686977655879f741f9aa693432081210774ef'),
     'the dev address must not appear in the airdrop ledger'
   );
-  const paid = air.reduce((s, r) => s + (r.amount_ui || 0), 0);
-  assert.ok(Math.abs(paid - 6) < 1e-9, 'holders were paid exactly the 60%');
+  const nvdaPaid = air
+    .filter((r) => r.reward_token.toLowerCase() === config.rewardTokenAddress.toLowerCase())
+    .reduce((n, r) => n + (r.amount_ui || 0), 0);
+  const aiPaid = air
+    .filter((r) => r.reward_token.toLowerCase() === config.reward2TokenAddress.toLowerCase())
+    .reduce((n, r) => n + (r.amount_ui || 0), 0);
+  assert.ok(Math.abs(nvdaPaid - 3) < 1e-9, 'holders were paid half the 60% as NVDA');
+  assert.ok(aiPaid > 0, 'and the other half as AI');
   assert.strictEqual(cycle.quote_burned, 2, 'and the buyback still took its 20%');
   assert.strictEqual(cycle.quote_gas, 1, 'and the gas leg its 10%');
 
@@ -208,12 +250,35 @@ test('recorded payouts sum EXACTLY to the amount distributed — no dust', async
   const all = await db.getDb().collection('airdrops').find({ cycle_id: cycle.id }).toArray();
   assert.ok(all.length > 0, 'the payouts were still recorded for the operator');
 
-  // Allocations must sum to the distributed amount exactly - no dust left
-  // behind, and nothing allocated that was never claimed.
-  const decimals = config.rewardDecimals;
-  const totalRaw = all.reduce((sum, r) => sum + BigInt(r.amount_raw), 0n);
-  const expectedRaw = BigInt(Math.round(3.7 * 0.65 * 10 ** 9)) * 10n ** BigInt(decimals - 9);
-  assert.strictEqual(totalRaw, expectedRaw, 'allocations must sum to the distributed amount exactly');
+  // Allocations must sum to the distributed amount exactly — no dust left
+  // behind, and nothing allocated that was never claimed. Checked PER ASSET now:
+  // a cross-asset total would be meaningless and could hide dust in either leg.
+  const { splitRewardQuote } = require('./cycle');
+  const holdersShare = +(3.7 * 0.65).toFixed(9);
+  const { first, second } = splitRewardQuote(holdersShare);
+  assert.strictEqual(+(first + second).toFixed(9), holdersShare, 'the legs re-add to the share');
+
+  const rawIn = (token) =>
+    all
+      .filter((r) => r.reward_token.toLowerCase() === token.toLowerCase())
+      .reduce((sum, r) => sum + BigInt(r.amount_raw), 0n);
+
+  assert.strictEqual(
+    rawIn(config.rewardTokenAddress),
+    parseUnits(toUnitString(first, config.rewardDecimals), config.rewardDecimals),
+    'the NVDA leg sums to its share of the claim exactly'
+  );
+
+  // The AI leg is measured against what the swap actually returned, not against
+  // a quote: that is the amount the cycle had to hand out.
+  const swap = cycle.steps
+    .filter((s) => s.name === 'reward-swap')
+    .find((s) => s.detail.symbol === config.reward2Symbol);
+  assert.strictEqual(
+    rawIn(config.reward2TokenAddress),
+    parseUnits(toUnitString(swap.detail.tokensBought, config.reward2Decimals), config.reward2Decimals),
+    'every unit of AI bought reaches a holder'
+  );
 });
 
 test('a dry run makes no network call — it completed with no RPC reachable', async () => {
