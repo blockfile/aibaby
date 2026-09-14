@@ -1,6 +1,6 @@
 # aibaby
 
-**Creator-fee reward bot and stats API for [babyartificialinu.com](https://babyartificialinu.com).**
+**Creator-fee reward bot and stats API for [artificialbabyinu.com](https://artificialbabyinu.com).**
 
 BABYINU launches on the Pons V2 launchpad **paired with NVDA** (tokenized
 NVIDIA stock). Because pons pays creator fees in whatever a launch is priced in,
@@ -47,7 +47,7 @@ The public API must never hold a signing key, so the bot is a separate process:
 
 | Process | Runs | Holds the wallet key | Exposed |
 | --- | --- | --- | --- |
-| `server.js` (`npm start`) | the site's API | **no** | nginx → `api.babyartificialinu.com` |
+| `server.js` (`npm start`) | the site's API | **no** | nginx → `api.artificialbabyinu.com` |
 | `bot.js` (`npm run bot`) | scheduler + cycle | **yes** | `127.0.0.1` only |
 
 They share one MongoDB: the bot writes payouts, the API reads them. A compromise
@@ -410,7 +410,7 @@ a tokenized equity.
 ## Deploying
 
 See [`DEPLOY.md`](DEPLOY.md) — Ubuntu 24.04, Node 22, MongoDB, two PM2
-processes, nginx and Certbot for `api.babyartificialinu.com`.
+processes, nginx and Certbot for `api.artificialbabyinu.com`.
 
 ## Design
 

@@ -1,12 +1,12 @@
 # Deploying aibaby to Ubuntu 24.04
 
-Site: **https://babyartificialinu.com** · API: **https://api.babyartificialinu.com**
+Site: **https://artificialbabyinu.com** · API: **https://api.artificialbabyinu.com**
 
 Two PM2 processes over one MongoDB, from `/var/www/aibaby`:
 
 | Process | Port | Reachable from |
 | --- | --- | --- |
-| `aibaby-api` (`server.js`) | 3000 | the internet, via nginx → `api.babyartificialinu.com` |
+| `aibaby-api` (`server.js`) | 3000 | the internet, via nginx → `api.artificialbabyinu.com` |
 | `aibaby-bot` (`bot.js`) | 3100 | **localhost only** — never proxied |
 
 The bot holds the wallet key and `POST /run` pays real money out, so its port
@@ -24,8 +24,8 @@ transfer graph. The **disperser is per-project**: it is the recorded sender of
 every payout, so sharing one links the projects on any bubblemap. Deploy one at
 go-live with `node scripts/deploy-disperser-v2.js --confirm`.
 
-**Before you start:** point a DNS `A` record for `api.babyartificialinu.com` at the
-server's public IP and let it propagate (`dig +short api.babyartificialinu.com`). Certbot
+**Before you start:** point a DNS `A` record for `api.artificialbabyinu.com` at the
+server's public IP and let it propagate (`dig +short api.artificialbabyinu.com`). Certbot
 cannot issue a certificate until it resolves.
 
 ## 1. Base prep
@@ -184,7 +184,7 @@ TRIGGER_SCHEDULE=*/30 * * * *
 MONGODB_URI=                   # from step 4
 MONGODB_DB=aibaby
 API_KEY=                       # any long random string; guards the bot's /run
-CORS_ORIGINS=https://babyartificialinu.com,https://www.babyartificialinu.com
+CORS_ORIGINS=https://artificialbabyinu.com,https://www.artificialbabyinu.com
 ```
 
 Generate the API key rather than inventing one:
@@ -233,11 +233,11 @@ apt install -y nginx
 This proxies **only** port 3000. The bot's 3100 is deliberately absent.
 
 ```bash
-tee /etc/nginx/sites-available/api.babyartificialinu.com > /dev/null <<'NGINX'
+tee /etc/nginx/sites-available/api.artificialbabyinu.com > /dev/null <<'NGINX'
 server {
     listen 80;
     listen [::]:80;
-    server_name api.babyartificialinu.com;
+    server_name api.artificialbabyinu.com;
 
     access_log /var/log/nginx/aibaby.access.log;
     error_log  /var/log/nginx/aibaby.error.log;
@@ -258,24 +258,24 @@ server {
 }
 NGINX
 
-ln -s /etc/nginx/sites-available/api.babyartificialinu.com /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/api.artificialbabyinu.com /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
-curl http://api.babyartificialinu.com/health
+curl http://api.artificialbabyinu.com/health
 ```
 
 ## 9. Certbot / HTTPS
 
-The site is HTTPS, so the API must be — a browser on `https://babyartificialinu.com`
-refuses to fetch `http://api.babyartificialinu.com` as mixed content.
+The site is HTTPS, so the API must be — a browser on `https://artificialbabyinu.com`
+refuses to fetch `http://api.artificialbabyinu.com` as mixed content.
 
 ```bash
 snap install core && snap refresh core
 snap install --classic certbot
 ln -sf /snap/bin/certbot /usr/bin/certbot
 
-certbot --nginx -d api.babyartificialinu.com --redirect \
+certbot --nginx -d api.artificialbabyinu.com --redirect \
   -m you@example.com --agree-tos --no-eff-email
 
 certbot renew --dry-run
@@ -285,17 +285,17 @@ systemctl list-timers | grep certbot
 ## 10. Verify
 
 ```bash
-curl https://api.babyartificialinu.com/health
-curl https://api.babyartificialinu.com/token
-curl https://api.babyartificialinu.com/stats
-curl "https://api.babyartificialinu.com/rewards?limit=5"
+curl https://api.artificialbabyinu.com/health
+curl https://api.artificialbabyinu.com/token
+curl https://api.artificialbabyinu.com/stats
+curl "https://api.artificialbabyinu.com/rewards?limit=5"
 
 # CORS — must echo the site's origin back
-curl -s -H "Origin: https://babyartificialinu.com" -D- -o /dev/null \
-  https://api.babyartificialinu.com/stats | grep -i access-control-allow-origin
+curl -s -H "Origin: https://artificialbabyinu.com" -D- -o /dev/null \
+  https://api.artificialbabyinu.com/stats | grep -i access-control-allow-origin
 
 # The bot must NOT be reachable from outside
-curl -m 5 http://api.babyartificialinu.com:3100/status   # must fail or time out
+curl -m 5 http://api.artificialbabyinu.com:3100/status   # must fail or time out
 ```
 
 A 403 on the CORS check means the origin is missing from `CORS_ORIGINS` — the
@@ -311,7 +311,7 @@ Then point the site at it and redeploy the frontend. This project's site
 variable as-is, so leaving off `/stats` hits the API's index and fails the panel:
 
 ```ini
-VITE_STATS_API_URL=https://api.babyartificialinu.com/stats
+VITE_STATS_API_URL=https://api.artificialbabyinu.com/stats
 ```
 
 Its stats panel reads `marketCap`, `aiDistributed` and `nvdaDistributed` as
@@ -426,8 +426,8 @@ pm2 restart aibaby-api aibaby-bot --update-env
 # process, but BOTH processes connect to MongoDB before they listen — on a
 # hosted URI that is a remote round trip. A curl on the next line gets a 502
 # from nginx, or an empty body, from an API that is starting perfectly normally.
-until curl -sf https://api.babyartificialinu.com/health >/dev/null; do sleep 1; done
-curl -s https://api.babyartificialinu.com/stats | head -c 200
+until curl -sf https://api.artificialbabyinu.com/health >/dev/null; do sleep 1; done
+curl -s https://api.artificialbabyinu.com/stats | head -c 200
 ```
 
 ## Operational watch-list
