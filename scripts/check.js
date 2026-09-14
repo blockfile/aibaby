@@ -210,13 +210,19 @@ async function main() {
     ownOn
       ? `  reward 3   : ${config.tokenSymbol} ${config.tokenAddress || '(TOKEN_ADDRESS not set)'} ` +
           `(${config.ownTokenPct}% of a claim, BOUGHT BACK on the launch venue and airdropped — OWN_TOKEN_PCT)`
-      : '  reward 3   : off (OWN_TOKEN_PCT=0) — no own-token buyback for holders'
+      : '  reward 3   : off (OWN_TOKEN_PCT=0) — holders are not paid in ' + config.tokenSymbol
+  );
+  console.log(
+    config.buybackHoldPct > 0
+      ? `  buyback    : ${config.buybackHoldPct}% of a claim buys ${config.tokenSymbol} back and KEEPS it in the bot wallet (BUYBACK_HOLD_PCT)`
+      : '  buyback    : no buy-and-keep (BUYBACK_HOLD_PCT=0)'
   );
   console.log(`  explorer   : ${config.explorerApi}`);
   console.log(`  dexscreener: chain "${config.dexscreenerChainId}"`);
   console.log(`  pons api   : ${config.ponsApi}`);
   console.log(
-    `  split      : ${config.rewardPct}% NVDA+AI / ${config.ownTokenPct}% ${config.tokenSymbol} buyback→holders / ${config.burnPct}% buyback+burn / ` +
+    `  split      : ${config.rewardPct}% NVDA+AI / ${config.buybackHoldPct}% ${config.tokenSymbol} buyback→kept / ` +
+      `${config.ownTokenPct}% ${config.tokenSymbol} buyback→holders / ${config.burnPct}% buyback+burn / ` +
       `${config.gasPct}% gas / ${config.devPct}% dev`
   );
   // Only worth mentioning when a dev cut actually exists. At the default 80/20

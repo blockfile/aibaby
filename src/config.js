@@ -81,14 +81,20 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // simply not funded, and the cycle logs "burn share of this claim is zero" and
 // moves on. Setting BURN_PCT (and lowering REWARD_PCT to match) is all it takes
 // to switch it on; nothing else has to change.
-// Baby Artificial Inu pays holders THREE assets. The split of every claim:
+// Holders are paid TWO assets, NVDA and AI. The split of every claim:
 //
-//   REWARD_PCT     60  -> holders, as NVDA and AI (divided by REWARD2_SHARE_PCT)
-//   OWN_TOKEN_PCT  30  -> buys BABYINU back and airdrops it to holders
-//   BURN_PCT        0  -> buys BABYINU back and burns it (off)
-//   GAS_PCT        10  -> sold for ETH to pay for the payouts
+//   REWARD_PCT        60  -> holders, as NVDA and AI (divided by REWARD2_SHARE_PCT)
+//   BUYBACK_HOLD_PCT  30  -> buys BABYINU back and KEEPS it in the bot wallet
+//   OWN_TOKEN_PCT      0  -> buys BABYINU back and airdrops it to holders (off)
+//   BURN_PCT           0  -> buys BABYINU back and burns it (off)
+//   GAS_PCT           10  -> sold for ETH to pay for the payouts
 //
-// At REWARD2_SHARE_PCT=50 that is 30 NVDA / 30 AI / 30 BABYINU / 10 gas.
+// At REWARD2_SHARE_PCT=50 that is 30 NVDA / 30 AI / 30 BABYINU kept / 10 gas.
+//
+// The three BABYINU legs all BUY the token and differ only in what happens
+// next — kept, handed to holders, or destroyed — and each is its own number, so
+// any mix is a settings change. Kept tokens sit in the bot wallet, which the
+// holder snapshot excludes, so they never earn a share of the rewards.
 //
 // OWN_TOKEN_PCT is its OWN leg of the claim rather than a third share of
 // REWARD_PCT on purpose: buying the launch token is a different trade from the
@@ -98,7 +104,8 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // removes it from supply while this hands it to holders — setting one does not
 // fund the other.
 const rewardPct = num(process.env.REWARD_PCT, 60);
-const ownTokenPct = num(process.env.OWN_TOKEN_PCT, 30);
+const ownTokenPct = num(process.env.OWN_TOKEN_PCT, 0);
+const buybackHoldPct = num(process.env.BUYBACK_HOLD_PCT, 30);
 const burnPct = num(process.env.BURN_PCT, 0);
 const gasPct = num(process.env.GAS_PCT, 10);
 if (!(rewardPct >= 0 && rewardPct <= 100)) {
@@ -107,21 +114,25 @@ if (!(rewardPct >= 0 && rewardPct <= 100)) {
 if (!(ownTokenPct >= 0 && ownTokenPct <= 100)) {
   throw new Error(`invalid split: OWN_TOKEN_PCT(${ownTokenPct}) must be within [0, 100]`);
 }
+if (!(buybackHoldPct >= 0 && buybackHoldPct <= 100)) {
+  throw new Error(`invalid split: BUYBACK_HOLD_PCT(${buybackHoldPct}) must be within [0, 100]`);
+}
 if (!(burnPct >= 0 && burnPct <= 100)) {
   throw new Error(`invalid split: BURN_PCT(${burnPct}) must be within [0, 100]`);
 }
 if (!(gasPct >= 0 && gasPct <= 100)) {
   throw new Error(`invalid split: GAS_PCT(${gasPct}) must be within [0, 100]`);
 }
-if (rewardPct + ownTokenPct + burnPct + gasPct > 100) {
+if (rewardPct + ownTokenPct + buybackHoldPct + burnPct + gasPct > 100) {
   throw new Error(
-    `invalid split: REWARD_PCT(${rewardPct}) + OWN_TOKEN_PCT(${ownTokenPct}) + BURN_PCT(${burnPct}) + ` +
-    `GAS_PCT(${gasPct}) = ${rewardPct + ownTokenPct + burnPct + gasPct} exceeds 100`
+    `invalid split: REWARD_PCT(${rewardPct}) + OWN_TOKEN_PCT(${ownTokenPct}) + ` +
+    `BUYBACK_HOLD_PCT(${buybackHoldPct}) + BURN_PCT(${burnPct}) + GAS_PCT(${gasPct}) = ` +
+    `${rewardPct + ownTokenPct + buybackHoldPct + burnPct + gasPct} exceeds 100`
   );
 }
 // toFixed(6) keeps a fractional share from leaving float dust behind
 // (100 - 80.1 is 19.900000000000006 in FP).
-const devPct = +(100 - rewardPct - ownTokenPct - burnPct - gasPct).toFixed(6);
+const devPct = +(100 - rewardPct - ownTokenPct - buybackHoldPct - burnPct - gasPct).toFixed(6);
 
 // ── The holders' share is paid in TWO assets ─────────────────────────────────
 // REWARD_PCT decides how much of a claim reaches holders. This decides what it
@@ -335,6 +346,7 @@ const config = {
   // ── Bot: split and eligibility ─────────────────────────────────────────────
   rewardPct,
   ownTokenPct,
+  buybackHoldPct,
   burnPct,
   gasPct,
   devPct,

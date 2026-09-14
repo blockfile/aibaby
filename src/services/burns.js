@@ -20,15 +20,27 @@ const config = require('./../config');
 const repo = require('../db/repository');
 const { cached } = require('./cache');
 
-const EMPTY = { totalBurned: null, burnQuoteSpent: null, burns: null };
+const EMPTY = {
+  totalBurned: null,
+  burnQuoteSpent: null,
+  burns: null,
+  totalBoughtBack: null,
+  boughtBackQuoteSpent: null,
+  buybacksHeld: null,
+};
 
 async function fetchBurns() {
   if (!config.tokenAddress) return EMPTY; // pre-launch: nothing to sum
-  const { tokensBurned, quoteSpent, burns } = await repo.getBurnTotal();
+  const [burned, held] = await Promise.all([repo.getBurnTotal(), repo.getBuybackHoldTotal()]);
   return {
-    totalBurned: tokensBurned ?? 0,
-    burnQuoteSpent: quoteSpent ?? 0,
-    burns: burns ?? 0,
+    totalBurned: burned.tokensBurned ?? 0,
+    burnQuoteSpent: burned.quoteSpent ?? 0,
+    burns: burned.burns ?? 0,
+    // Bought back and KEPT (BUYBACK_HOLD_PCT) — a separate figure from the
+    // burn: these tokens still exist, so supply has not dropped by them.
+    totalBoughtBack: held.tokensBoughtBack ?? 0,
+    boughtBackQuoteSpent: held.quoteSpent ?? 0,
+    buybacksHeld: held.buybacks ?? 0,
   };
 }
 

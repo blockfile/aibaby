@@ -4,6 +4,7 @@ process.env.DRY_RUN = 'true';
 // The split cases below were written for three legs of a claim; the own-token
 // leg has its own cases at the bottom of this file.
 process.env.OWN_TOKEN_PCT = '0';
+process.env.BUYBACK_HOLD_PCT = '0';
 process.env.REWARD_PCT = '65';
 process.env.BURN_PCT = '25';
 process.env.GAS_PCT = '10';
@@ -31,7 +32,7 @@ test('the four legs always re-add to the claim', () => {
 });
 
 test('splitting nothing yields nothing on every leg', () => {
-  assert.deepStrictEqual(splitClaim(0), { rewardQuote: 0, ownTokenQuote: 0, burnQuote: 0, gasQuote: 0, devQuote: 0 });
+  assert.deepStrictEqual(splitClaim(0), { rewardQuote: 0, ownTokenQuote: 0, buybackHoldQuote: 0, burnQuote: 0, gasQuote: 0, devQuote: 0 });
 });
 
 test('a dev cut appears only when the three configured legs leave one', () => {
@@ -59,7 +60,7 @@ test('an all-to-holders split leaves nothing to burn or swap', () => {
   process.env.GAS_PCT = '0';
   for (const m of ['../config', './cycle']) delete require.cache[require.resolve(m)];
   const { splitClaim: split } = require('./cycle');
-  assert.deepStrictEqual(split(5), { rewardQuote: 5, ownTokenQuote: 0, burnQuote: 0, gasQuote: 0, devQuote: 0 });
+  assert.deepStrictEqual(split(5), { rewardQuote: 5, ownTokenQuote: 0, buybackHoldQuote: 0, burnQuote: 0, gasQuote: 0, devQuote: 0 });
 
   process.env.REWARD_PCT = '65';
   process.env.BURN_PCT = '25';
@@ -275,16 +276,16 @@ function withSplit(env, fn) {
 }
 
 test('a claim splits four ways and re-adds exactly: 30 NVDA / 30 AI / 30 BABYINU / 10 gas', () => {
-  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim, rewardLegPlan }, config) => {
+  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BUYBACK_HOLD_PCT: '0', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim, rewardLegPlan }, config) => {
     const s = splitClaim(100);
-    assert.deepStrictEqual(s, { rewardQuote: 60, ownTokenQuote: 30, burnQuote: 0, gasQuote: 10, devQuote: 0 });
+    assert.deepStrictEqual(s, { rewardQuote: 60, ownTokenQuote: 30, buybackHoldQuote: 0, burnQuote: 0, gasQuote: 10, devQuote: 0 });
     const plan = rewardLegPlan(s.rewardQuote, config.reward2SharePct, s.ownTokenQuote);
     assert.deepStrictEqual(plan.map((l) => [l.reward.symbol, l.quoteAmount]), [['NVDA', 30], ['AI', 30], [config.tokenSymbol, 30]]);
   });
 });
 
 test('the own-token leg is bought on the LAUNCH, not through a configured pool', () => {
-  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ rewardLegPlan }, config) => {
+  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BUYBACK_HOLD_PCT: '0', BURN_PCT: '0', GAS_PCT: '10' }, ({ rewardLegPlan }, config) => {
     const own = rewardLegPlan(60, 50, 30).find((l) => l.reward.kind === 'launch');
     assert.ok(own, 'a launch-kind leg is planned');
     assert.strictEqual(own.reward.tokenAddress, config.tokenAddress);
@@ -299,10 +300,10 @@ test('it runs LAST, so a slow launch-venue buy can never delay NVDA or AI', () =
 });
 
 test('an awkward claim still re-adds across all four legs', () => {
-  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim }) => {
+  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BUYBACK_HOLD_PCT: '0', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim }) => {
     for (const claim of [1.3300426388432187, 1.2546905469948721, 3.7, 0.000000009]) {
       const s = splitClaim(claim);
-      const sum = +(s.rewardQuote + s.ownTokenQuote + s.burnQuote + s.gasQuote + s.devQuote).toFixed(9);
+      const sum = +(s.rewardQuote + s.ownTokenQuote + s.buybackHoldQuote + s.burnQuote + s.gasQuote + s.devQuote).toFixed(9);
       assert.ok(Math.abs(sum - +claim.toFixed(9)) <= 1e-9, `${claim} re-adds (${sum})`);
     }
   });
@@ -311,4 +312,23 @@ test('an awkward claim still re-adds across all four legs', () => {
 test('OWN_TOKEN_PCT=0 plans no own-token leg at all', () => {
   const { rewardLegPlan } = require('./cycle');
   assert.ok(!rewardLegPlan(60, 50, 0).some((l) => l.reward.kind === 'launch'));
+});
+
+// ── The kept buyback (BUYBACK_HOLD_PCT) ─────────────────────────────────────
+
+test('the shipped split: 30 NVDA / 30 AI to holders, 30 BABYINU bought and kept, 10 gas', () => {
+  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '0', BUYBACK_HOLD_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim, rewardLegPlan }, config) => {
+    const s = splitClaim(100);
+    assert.deepStrictEqual(s, { rewardQuote: 60, ownTokenQuote: 0, buybackHoldQuote: 30, burnQuote: 0, gasQuote: 10, devQuote: 0 });
+    // Holders are paid exactly two assets: the kept buyback is NOT a reward leg.
+    const plan = rewardLegPlan(s.rewardQuote, config.reward2SharePct, s.ownTokenQuote);
+    assert.deepStrictEqual(plan.map((l) => [l.reward.symbol, l.quoteAmount]), [['NVDA', 30], ['AI', 30]]);
+  });
+});
+
+test('a failed buy-and-keep is reported, never thrown — holders are already paid', async () => {
+  const { describeHold } = require('./cycle');
+  assert.match(describeHold({ bought: false, skipped: false, error: 'pool quoted zero' }), /FAILED \(pool quoted zero\).*stays in the wallet/);
+  assert.match(describeHold({ skipped: true, reason: 'buyback-hold share of this claim is zero' }), /skipped/);
+  assert.match(describeHold({ bought: true, tokensBought: 5, quoteSpent: 1 }), /KEPT/);
 });

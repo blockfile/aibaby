@@ -518,3 +518,25 @@ test("the site's own normalise() accepts the payload even when nothing is source
   assert.strictEqual(live.nvdaDistributed, 6600);
   assert.ok(Math.abs(live.aiDistributed - 5700) < 1e-9);
 });
+
+// ── Bought back and KEPT (BUYBACK_HOLD_PCT) ─────────────────────────────────
+
+test('kept BABYINU is served on its own, never as burned', () => {
+  const out = buildStats({
+    market: { priceUsd: 0.00004 }, token: {}, rewards: {}, curve: {}, quote: {},
+    burns: { totalBurned: 0, totalBoughtBack: 5_000_000, boughtBackQuoteSpent: 3, buybacksHeld: 2 },
+    symbol: 'BABYINU', tokenAddress: '0xbaby',
+  });
+  assert.strictEqual(out.totalBoughtBack, 5_000_000);
+  assert.strictEqual(out.boughtBackQuoteSpent, 3);
+  assert.strictEqual(out.buybacksHeld, 2);
+  assert.ok(Math.abs(out.totalBoughtBackUsd - 200) < 1e-9);
+  // A kept token still exists: it must not move the burn figures.
+  assert.strictEqual(out.totalBurned, 0);
+});
+
+test('kept totals are null before there is anything to report, not a fake 0', () => {
+  const out = buildStats({ market: {}, token: {}, rewards: {}, curve: {}, quote: {}, burns: {}, symbol: 'BABYINU', tokenAddress: null });
+  assert.strictEqual(out.totalBoughtBack, null);
+  assert.strictEqual(out.totalBoughtBackUsd, null);
+});

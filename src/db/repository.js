@@ -47,6 +47,7 @@ async function finishCycle(id, fields) {
   const allowed = [
     'status', 'mode', 'phase', 'quote_claimed', 'quote_distributed',
     'quote_burned', 'tokens_burned', 'quote_gas', 'eth_received', 'quote_own_token',
+    'quote_bought_back', 'tokens_bought_back',
     'eligible_holders', 'total_holders',
     'sweep_skipped', 'sweep_reason',
     'note', 'error',
@@ -304,6 +305,36 @@ async function getBurnTotal() {
 }
 
 /**
+ * Everything bought back and KEPT (BUYBACK_HOLD_PCT), summed from its steps.
+ *
+ * Its own step name and its own total, never folded into the burn figures: a
+ * kept token still exists and can still move, and counting it as burned would
+ * tell visitors supply had dropped when it has not. Real transaction hashes
+ * only, so a DRY_RUN buy can never inflate what the site shows.
+ *
+ * @returns {Promise<{tokensBoughtBack:number, quoteSpent:number, buybacks:number}>}
+ */
+async function getBuybackHoldTotal() {
+  const db = getDb();
+  const [row] = await db
+    .collection('steps')
+    .aggregate([
+      { $match: { name: 'buyback-hold', status: 'ok', signature: { $regex: REAL_TX_HASH } } },
+      {
+        $group: {
+          _id: null,
+          buybacks: { $sum: 1 },
+          tokensBoughtBack: { $sum: { $ifNull: ['$detail.tokensBought', 0] } },
+          quoteSpent: { $sum: { $ifNull: ['$detail.quoteSpent', 0] } },
+        },
+      },
+      { $project: { _id: 0, buybacks: 1, tokensBoughtBack: 1, quoteSpent: 1 } },
+    ])
+    .toArray();
+  return row || { tokensBoughtBack: 0, quoteSpent: 0, buybacks: 0 };
+}
+
+/**
  * The fee gauge the site's /distribution endpoint serves.
  *
  * Written by the BOT (which can see the chain and the scheduler) and read by
@@ -386,6 +417,7 @@ module.exports = {
   finishCycle,
   addStep,
   getBurnTotal,
+  getBuybackHoldTotal,
   getBurnPage,
   getCycleWithSteps,
   getCycles,

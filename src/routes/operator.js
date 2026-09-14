@@ -51,6 +51,7 @@ function buildStatus({ scheduler: s, feeCheck, walletAddress: address, ethBalanc
     split: {
       rewardPct: config.rewardPct,
       ownTokenPct: config.ownTokenPct,
+      buybackHoldPct: config.buybackHoldPct,
       burnPct: config.burnPct,
       gasPct: config.gasPct,
       devPct: config.devPct,

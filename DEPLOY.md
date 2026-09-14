@@ -164,9 +164,10 @@ V4_BUYER_ADDRESS=0x5FCe84D38DD7707AC58bf8277859b384aa2158E8
 #     node scripts/deploy-disperser-v2.js --confirm
 DISPERSE_ADDRESS=
 
-REWARD_PCT=60     # to holders as NVDA + AI (30/30 at REWARD2_SHARE_PCT=50)
-OWN_TOKEN_PCT=30  # buys BABYINU back and airdrops it to holders
-BURN_PCT=0        # buyback+burn is BUILT but deliberately not funded
+REWARD_PCT=60        # to holders as NVDA + AI (30/30 at REWARD2_SHARE_PCT=50)
+BUYBACK_HOLD_PCT=30  # buys BABYINU back and KEEPS it in the bot wallet
+OWN_TOKEN_PCT=0      # buy back and airdrop to holders: built, off
+BURN_PCT=0           # buy back and burn: built, off
 GAS_PCT=10
 MIN_HOLD=10000
 

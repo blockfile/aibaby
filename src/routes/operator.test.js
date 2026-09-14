@@ -41,13 +41,13 @@ test('a mismatched fee recipient is reported as false with the address found', (
 
 test('status reports every share of the split, so they add to 100', () => {
   const out = buildStatus({ scheduler: {}, feeCheck: null, walletAddress: '0xabc', ethBalance: 1 });
-  const { rewardPct, ownTokenPct, burnPct, gasPct, devPct } = out.split;
-  for (const [name, v] of Object.entries({ rewardPct, ownTokenPct, burnPct, gasPct, devPct })) {
+  const { rewardPct, ownTokenPct, buybackHoldPct, burnPct, gasPct, devPct } = out.split;
+  for (const [name, v] of Object.entries({ rewardPct, ownTokenPct, buybackHoldPct, burnPct, gasPct, devPct })) {
     assert.strictEqual(typeof v, 'number', `${name} must be reported`);
   }
   // Without ownTokenPct these summed to 70: a status that silently omitted 30%
   // of every claim, which is exactly what this test exists to catch.
-  assert.strictEqual(rewardPct + ownTokenPct + burnPct + gasPct + devPct, 100);
+  assert.strictEqual(rewardPct + ownTokenPct + buybackHoldPct + burnPct + gasPct + devPct, 100);
 });
 
 test('status surfaces the gas reserve alongside the balance it guards', () => {

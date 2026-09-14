@@ -62,6 +62,7 @@ function splitClaim(claimedQuote) {
   };
   const rewardQuote = round(claimedQuote * (config.rewardPct / 100));
   const ownTokenQuote = round(claimedQuote * (config.ownTokenPct / 100));
+  const buybackHoldQuote = round(claimedQuote * (config.buybackHoldPct / 100));
   const burnQuote = round(claimedQuote * (config.burnPct / 100));
   const gasQuote = round(claimedQuote * (config.gasPct / 100));
   // The dev leg is the remainder, so it absorbs the rounding of the other
@@ -71,8 +72,8 @@ function splitClaim(claimedQuote) {
   // when DEV_PAYOUT_ADDRESS is unset, but a negative amount reaching parseUnits
   // would throw, and the first person to set that address would be the one to
   // find out.
-  const devQuote = Math.max(0, round(claimedQuote - rewardQuote - ownTokenQuote - burnQuote - gasQuote));
-  return { rewardQuote, ownTokenQuote, burnQuote, gasQuote, devQuote };
+  const devQuote = Math.max(0, round(claimedQuote - rewardQuote - ownTokenQuote - buybackHoldQuote - burnQuote - gasQuote));
+  return { rewardQuote, ownTokenQuote, buybackHoldQuote, burnQuote, gasQuote, devQuote };
 }
 
 /**
@@ -165,6 +166,34 @@ function summarizeReward(reward) {
     return { status: 'complete', note: `airdrop sent ${reward.sent}, ${reward.failed} failed${suffix}` };
   }
   return { status: 'complete', note: `airdrop sent ${reward.sent}${suffix}` };
+}
+
+/**
+ * Buy BABYINU with `quoteAmount` of NVDA and keep it. Never throws: a failed
+ * buy is reported, recorded as a failed step, and leaves the NVDA in the wallet.
+ *
+ * Uses the same launch-token buy as the own-token leg (buyReward with the
+ * launch leg), so it gets the phase dispatch, the retries, the dry-run
+ * simulation and the balance-delta measurement for free.
+ */
+async function buyBackAndHold({ launch, quoteAmount }) {
+  if (!(quoteAmount > 0)) return { skipped: true, bought: false, reason: 'buyback-hold share of this claim is zero' };
+  try {
+    const r = await buyReward({ quoteAmount, reward: ownTokenLeg(), launch });
+    if (r.skipped) return { ...r, bought: false };
+    return { ...r, bought: !!r.bought };
+  } catch (err) {
+    return { bought: false, skipped: false, quoteSpent: 0, tokensBought: 0, error: err.shortMessage || err.message };
+  }
+}
+
+/** Pure: one line describing what the buyback-hold did. */
+function describeHold(r) {
+  if (r.skipped) return `buyback-hold skipped: ${r.reason}`;
+  if (r.bought) {
+    return `buyback-hold bought ${r.tokensBought} ${config.tokenSymbol} for ${r.quoteSpent} ${config.quoteSymbol} and KEPT it`;
+  }
+  return `buyback-hold FAILED (${r.error || 'bought nothing'}) — the NVDA stays in the wallet, NOT auto-retried`;
 }
 
 /**
@@ -414,10 +443,11 @@ async function runCycle() {
     }
 
     // 3. Split.
-    const { rewardQuote, ownTokenQuote, burnQuote, gasQuote, devQuote } = splitClaim(claimed);
+    const { rewardQuote, ownTokenQuote, buybackHoldQuote, burnQuote, gasQuote, devQuote } = splitClaim(claimed);
     log(
       `split: ${rewardQuote} to holders as NVDA+AI (${config.rewardPct}%), ` +
         `${ownTokenQuote} to buy ${config.tokenSymbol} for holders (${config.ownTokenPct}%), ` +
+        `${buybackHoldQuote} to buy ${config.tokenSymbol} back and keep (${config.buybackHoldPct}%), ` +
         `${burnQuote} to buyback+burn (${config.burnPct}%), ` +
         `${gasQuote} to gas (${config.gasPct}%), ${devQuote} to dev (${config.devPct}%)`
     );
@@ -450,6 +480,30 @@ async function runCycle() {
       await repo.addStep({ cycleId: id, name: 'reward', status: 'skipped', detail: { reason, rewardQuote, ownTokenQuote } });
       log(`reward leg skipped: ${reason}`);
     }
+
+    // 4b. Buy BABYINU back and KEEP it. After the reward legs, so the holders'
+    //     NVDA and AI never wait on a buy on the launch venue. Non-fatal for the
+    //     same reason the burn is: holders are already paid, and a failed buy
+    //     leaves its NVDA in the wallet. The tokens bought stay in the bot wallet,
+    //     which the holder snapshot excludes, so they never take a share of a
+    //     future reward.
+    const hold = await buyBackAndHold({ launch, quoteAmount: buybackHoldQuote });
+    await repo.addStep({
+      cycleId: id,
+      name: 'buyback-hold',
+      status: hold.bought ? 'ok' : hold.skipped ? 'skipped' : 'failed',
+      signature: hold.signature ?? null,
+      detail: {
+        symbol: config.tokenSymbol,
+        quoteSpent: hold.quoteSpent ?? 0,
+        tokensBought: hold.tokensBought ?? 0,
+        venue: hold.venue ?? null,
+        kept: true,
+        reason: hold.reason ?? null,
+        error: hold.error ?? null,
+      },
+    });
+    log(describeHold(hold));
 
     // 5. Buy BABYINU with the burn share and destroy it. Non-fatal: the
     //    holders have already been paid, so a failed swap leaves the NVDA in
@@ -507,6 +561,8 @@ async function runCycle() {
       eth_received: gas.ethReceived,
       quote_burned: buyback.burned ? burnQuote : 0,
       tokens_burned: buyback.burned ? buyback.tokensBought : 0,
+      quote_bought_back: hold.bought ? hold.quoteSpent : 0,
+      tokens_bought_back: hold.bought ? hold.tokensBought : 0,
       eligible_holders: reward.eligibleHolders,
       total_holders: reward.totalHolders,
       sweep_skipped: sweep.skipped ? 1 : 0,
@@ -528,6 +584,8 @@ async function runCycle() {
 
 module.exports = {
   runCycle,
+  buyBackAndHold,
+  describeHold,
   runRewardLegs,
   splitRewardQuote,
   rewardLegPlan,

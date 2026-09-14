@@ -248,6 +248,15 @@ function buildStats({
     totalBurnedUsd: burnedUsd(burns, priceUsd),
     burnedPctOfSupply: burnedPctOfSupply(burns, token),
     burns: burns.burns ?? null,
+    // ── Bought back and KEPT (BUYBACK_HOLD_PCT) ─────────────────────────────
+    // BABYINU the bot bought and holds. Deliberately apart from the burn fields
+    // and from burnedPctOfSupply: these tokens still exist, so counting them as
+    // burned would claim a supply drop that has not happened.
+    totalBoughtBack: burns.totalBoughtBack ?? null,
+    boughtBackQuoteSpent: burns.boughtBackQuoteSpent ?? null,
+    totalBoughtBackUsd:
+      typeof burns.totalBoughtBack === 'number' && typeof priceUsd === 'number' ? burns.totalBoughtBack * priceUsd : null,
+    buybacksHeld: burns.buybacksHeld ?? null,
 
     // ── Creator fees EARNED ─────────────────────────────────────────────────
     // What the launch has swept in total, before the split takes its share for

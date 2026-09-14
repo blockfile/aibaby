@@ -12,7 +12,7 @@ const assert = require('node:assert');
 const OWNED = [
   'REWARD_PCT', 'BURN_PCT', 'GAS_PCT', 'TRIGGER_MODE', 'CLAIM_EVERY_USD', 'DEV_PAYOUT_ADDRESS',
   'POLL_SCHEDULE', 'TRIGGER_SCHEDULE', 'TOKEN_SYMBOL', 'MIN_HOLD',
-  'REWARD2_SHARE_PCT', 'REWARD2_TOKEN_ADDRESS', 'REWARD2_SYMBOL', 'OWN_TOKEN_PCT',
+  'REWARD2_SHARE_PCT', 'REWARD2_TOKEN_ADDRESS', 'REWARD2_SYMBOL', 'OWN_TOKEN_PCT', 'BUYBACK_HOLD_PCT',
 ];
 
 function loadConfig(env = {}) {
@@ -22,42 +22,42 @@ function loadConfig(env = {}) {
   return require('./config');
 }
 
-test('the default 60/30/0/10 split pays holders three assets and leaves no dev cut', () => {
-  // 60 to NVDA+AI (30/30 at REWARD2_SHARE_PCT=50), 30 buys BABYINU back for
-  // holders, 10 funds gas. BURN_PCT is 0 BY CHOICE: buying BABYINU back to
-  // DISTRIBUTE is OWN_TOKEN_PCT; burning it is a separate decision, not funded.
+test('the default split pays holders NVDA and AI, and KEEPS the bought-back BABYINU', () => {
+  // 60 to NVDA+AI (30/30 at REWARD2_SHARE_PCT=50), 30 buys BABYINU back and
+  // holds it, 10 funds gas. Nothing is airdropped in BABYINU and nothing burned.
   const config = loadConfig({ DRY_RUN: 'true' });
   assert.strictEqual(config.rewardPct, 60);
-  assert.strictEqual(config.ownTokenPct, 30);
+  assert.strictEqual(config.buybackHoldPct, 30);
+  assert.strictEqual(config.ownTokenPct, 0);
   assert.strictEqual(config.burnPct, 0);
   assert.strictEqual(config.gasPct, 10);
   assert.strictEqual(config.devPct, 0);
 });
 
 test('the dev cut is whatever the other three legs leave behind', () => {
-  const config = loadConfig({ REWARD_PCT: '60', OWN_TOKEN_PCT: '0', BURN_PCT: '20', GAS_PCT: '10', DRY_RUN: 'true' });
+  const config = loadConfig({ REWARD_PCT: '60', OWN_TOKEN_PCT: '0', BURN_PCT: '20', GAS_PCT: '10', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' });
   assert.strictEqual(config.devPct, 10);
 });
 
 test('a fractional split leaves no floating-point dust in the dev cut', () => {
-  const config = loadConfig({ REWARD_PCT: '80.1', OWN_TOKEN_PCT: '0', BURN_PCT: '0', GAS_PCT: '0', DRY_RUN: 'true' });
+  const config = loadConfig({ REWARD_PCT: '80.1', OWN_TOKEN_PCT: '0', BURN_PCT: '0', GAS_PCT: '0', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' });
   assert.strictEqual(config.devPct, 19.9); // not 19.900000000000006
 });
 
 test('an out-of-range split is rejected outright', () => {
-  assert.throws(() => loadConfig({ REWARD_PCT: '140', BURN_PCT: '0', GAS_PCT: '0', DRY_RUN: 'true' }), /REWARD_PCT/);
-  assert.throws(() => loadConfig({ REWARD_PCT: '10', BURN_PCT: '140', GAS_PCT: '0', DRY_RUN: 'true' }), /BURN_PCT/);
+  assert.throws(() => loadConfig({ REWARD_PCT: '140', BURN_PCT: '0', GAS_PCT: '0', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' }), /REWARD_PCT/);
+  assert.throws(() => loadConfig({ REWARD_PCT: '10', BURN_PCT: '140', GAS_PCT: '0', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' }), /BURN_PCT/);
 });
 
 test('legs that together exceed the claim are refused', () => {
   // Otherwise the bot would try to spend more than it claimed and the dev
   // remainder would silently go negative.
   assert.throws(
-    () => loadConfig({ REWARD_PCT: '80', BURN_PCT: '30', GAS_PCT: '0', DRY_RUN: 'true' }),
+    () => loadConfig({ REWARD_PCT: '80', BURN_PCT: '30', GAS_PCT: '0', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' }),
     /exceeds 100/
   );
   assert.throws(
-    () => loadConfig({ REWARD_PCT: '65', BURN_PCT: '25', GAS_PCT: '20', DRY_RUN: 'true' }),
+    () => loadConfig({ REWARD_PCT: '65', BURN_PCT: '25', GAS_PCT: '20', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' }),
     /exceeds 100/
   );
   assert.throws(
@@ -179,14 +179,14 @@ test('the second leg can be switched off entirely', () => {
 // ── OWN_TOKEN_PCT: buy BABYINU back and hand it to holders ────────────────────
 
 test('OWN_TOKEN_PCT is its own leg of the claim, counted in the 100', () => {
-  const config = loadConfig({ REWARD_PCT: '50', OWN_TOKEN_PCT: '40', BURN_PCT: '0', GAS_PCT: '10', DRY_RUN: 'true' });
+  const config = loadConfig({ REWARD_PCT: '50', OWN_TOKEN_PCT: '40', BURN_PCT: '0', GAS_PCT: '10', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' });
   assert.strictEqual(config.ownTokenPct, 40);
   assert.strictEqual(config.devPct, 0);
 });
 
 test('the four legs together may not exceed the claim — and the error names the new one', () => {
   assert.throws(
-    () => loadConfig({ REWARD_PCT: '60', OWN_TOKEN_PCT: '40', BURN_PCT: '0', GAS_PCT: '10', DRY_RUN: 'true' }),
+    () => loadConfig({ REWARD_PCT: '60', OWN_TOKEN_PCT: '40', BURN_PCT: '0', GAS_PCT: '10', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' }),
     /OWN_TOKEN_PCT\(40\).*exceeds 100/
   );
 });
@@ -198,8 +198,36 @@ test('an out-of-range OWN_TOKEN_PCT is rejected outright', () => {
 
 test('OWN_TOKEN_PCT and BURN_PCT are independent — one does not fund the other', () => {
   // Both buy BABYINU; one hands it to holders, the other destroys it.
-  const config = loadConfig({ REWARD_PCT: '50', OWN_TOKEN_PCT: '20', BURN_PCT: '20', GAS_PCT: '10', DRY_RUN: 'true' });
+  const config = loadConfig({ REWARD_PCT: '50', OWN_TOKEN_PCT: '20', BURN_PCT: '20', GAS_PCT: '10', BUYBACK_HOLD_PCT: '0', DRY_RUN: 'true' });
   assert.strictEqual(config.ownTokenPct, 20);
   assert.strictEqual(config.burnPct, 20);
   assert.strictEqual(config.devPct, 0);
+});
+
+// ── BUYBACK_HOLD_PCT: buy BABYINU back and keep it ──────────────────────────
+
+test('BUYBACK_HOLD_PCT is its own leg of the claim, counted in the 100', () => {
+  const config = loadConfig({ REWARD_PCT: '50', BUYBACK_HOLD_PCT: '40', OWN_TOKEN_PCT: '0', BURN_PCT: '0', GAS_PCT: '10', DRY_RUN: 'true' });
+  assert.strictEqual(config.buybackHoldPct, 40);
+  assert.strictEqual(config.devPct, 0);
+});
+
+test('with the kept buyback added, the legs still may not exceed the claim — and the error names it', () => {
+  assert.throws(
+    () => loadConfig({ REWARD_PCT: '60', BUYBACK_HOLD_PCT: '40', OWN_TOKEN_PCT: '0', BURN_PCT: '0', GAS_PCT: '10', DRY_RUN: 'true' }),
+    /BUYBACK_HOLD_PCT\(40\).*exceeds 100/
+  );
+});
+
+test('an out-of-range BUYBACK_HOLD_PCT is rejected outright', () => {
+  assert.throws(() => loadConfig({ BUYBACK_HOLD_PCT: '140', REWARD_PCT: '0', GAS_PCT: '0', DRY_RUN: 'true' }), /BUYBACK_HOLD_PCT/);
+  assert.throws(() => loadConfig({ BUYBACK_HOLD_PCT: '-1', DRY_RUN: 'true' }), /BUYBACK_HOLD_PCT/);
+});
+
+test('keep, distribute and burn are three independent BABYINU legs', () => {
+  const config = loadConfig({ REWARD_PCT: '40', BUYBACK_HOLD_PCT: '20', OWN_TOKEN_PCT: '15', BURN_PCT: '15', GAS_PCT: '10', DRY_RUN: 'true' });
+  assert.deepStrictEqual(
+    [config.buybackHoldPct, config.ownTokenPct, config.burnPct, config.devPct],
+    [20, 15, 15, 0]
+  );
 });

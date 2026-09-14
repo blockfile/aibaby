@@ -10,6 +10,7 @@ process.env.DRY_RUN = 'true';
 // The scenarios below predate the own-token leg and exercise the other legs;
 // the three-asset cycle has its own test at the end.
 process.env.OWN_TOKEN_PCT = '0';
+process.env.BUYBACK_HOLD_PCT = '0';
 process.env.REWARD_PCT = '65';
 process.env.BURN_PCT = '25';
 process.env.GAS_PCT = '10';
@@ -81,6 +82,8 @@ test('a funded vault claims, splits and airdrops to holders', async () => {
     'sweep', 'claim', 'gas',
     'reward-swap', 'airdrop',
     'reward-swap', 'airdrop',
+    // Always recorded, as buyback and dev are: skipped when its share is 0.
+    'buyback-hold',
     'buyback', 'dev',
   ]);
 
@@ -287,6 +290,7 @@ test('recorded payouts sum EXACTLY to the amount distributed — no dust', async
 test('a three-asset cycle pays NVDA, AI AND bought-back BABYINU, each to the last unit', async () => {
   process.env.REWARD_PCT = '60';
   process.env.OWN_TOKEN_PCT = '30';
+  process.env.BUYBACK_HOLD_PCT = '0';
   process.env.BURN_PCT = '0';
   process.env.GAS_PCT = '10';
   const RELOAD = ['../config', '../evm/buyback', '../evm/devpayout', '../evm/rewardswap', './cycle'];
@@ -330,6 +334,57 @@ test('a three-asset cycle pays NVDA, AI AND bought-back BABYINU, each to the las
   } finally {
     process.env.REWARD_PCT = '65';
     process.env.OWN_TOKEN_PCT = '0';
+    process.env.BURN_PCT = '25';
+    process.env.GAS_PCT = '10';
+    for (const m of RELOAD) delete require.cache[require.resolve(m)];
+  }
+});
+
+test('the shipped split pays NVDA and AI, and buys BABYINU back WITHOUT paying it out', async () => {
+  process.env.REWARD_PCT = '60';
+  process.env.OWN_TOKEN_PCT = '0';
+  process.env.BUYBACK_HOLD_PCT = '30';
+  process.env.BURN_PCT = '0';
+  process.env.GAS_PCT = '10';
+  const RELOAD = ['../config', '../evm/buyback', '../evm/devpayout', '../evm/rewardswap', './cycle'];
+  for (const m of RELOAD) delete require.cache[require.resolve(m)];
+  const cfg = require('../config');
+  const { runCycle: run } = require('./cycle');
+
+  try {
+    simvault.reset(10);
+    const cycle = await run();
+    assert.strictEqual(cycle.status, 'complete', cycle.error || '');
+    assert.strictEqual(cycle.quote_distributed, 6, 'holders got the 60%, in NVDA and AI');
+    assert.strictEqual(cycle.quote_bought_back, 3, '30% bought BABYINU back');
+    assert.ok(cycle.tokens_bought_back > 0, 'and the tokens it bought are recorded on the cycle');
+    assert.strictEqual(cycle.quote_burned, 0, 'kept, not burned');
+
+    // Holders were paid exactly two assets.
+    const swaps = cycle.steps.filter((s) => s.name === 'reward-swap');
+    assert.deepStrictEqual(swaps.map((s) => s.detail.symbol), ['NVDA', 'AI']);
+
+    // The buy happened, after the payouts, and was marked as kept.
+    const names = cycle.steps.map((s) => s.name);
+    const hold = cycle.steps.find((s) => s.name === 'buyback-hold');
+    assert.strictEqual(hold.status, 'ok');
+    assert.strictEqual(hold.detail.kept, true);
+    assert.strictEqual(hold.detail.quoteSpent, 3);
+    assert.ok(hold.detail.tokensBought > 0);
+    assert.ok(names.lastIndexOf('airdrop') < names.indexOf('buyback-hold'), 'holders are paid before the buy');
+
+    // And NOT A SINGLE BABYINU reached a holder.
+    const air = await db.getDb().collection('airdrops').find({ cycle_id: cycle.id }).toArray();
+    assert.ok(air.length > 0, 'NVDA and AI were airdropped');
+    assert.ok(
+      !air.some((r) => r.reward_token.toLowerCase() === String(cfg.tokenAddress).toLowerCase()),
+      'the kept BABYINU is never airdropped'
+    );
+    assert.strictEqual(cycle.steps.find((s) => s.name === 'buyback').status, 'skipped', 'and nothing was burned');
+  } finally {
+    process.env.REWARD_PCT = '65';
+    process.env.OWN_TOKEN_PCT = '0';
+    process.env.BUYBACK_HOLD_PCT = '0';
     process.env.BURN_PCT = '25';
     process.env.GAS_PCT = '10';
     for (const m of RELOAD) delete require.cache[require.resolve(m)];
