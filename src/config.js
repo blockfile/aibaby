@@ -81,16 +81,24 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // simply not funded, and the cycle logs "burn share of this claim is zero" and
 // moves on. Setting BURN_PCT (and lowering REWARD_PCT to match) is all it takes
 // to switch it on; nothing else has to change.
-// Holders are paid THREE assets: NVDA, AI and BABYINU. The split of every claim:
+// Four functions, plus the team's cut. The split of every claim:
 //
-//   REWARD_PCT        60  -> holders, as NVDA and AI (divided by REWARD2_SHARE_PCT)
-//   OWN_TOKEN_PCT     30  -> buys BABYINU back and AIRDROPS it to holders
-//   BUYBACK_HOLD_PCT   0  -> buys BABYINU back and keeps it in the bot wallet (off)
+//   REWARD_PCT        40  -> holders, as NVDA and AI (20 / 20 at REWARD2_SHARE_PCT=50)
+//   OWN_TOKEN_PCT     20  -> buys BABYINU back and AIRDROPS it to holders
+//   BUYBACK_HOLD_PCT  20  -> buys BABYINU back and KEEPS it (buyback only)
 //   BURN_PCT           0  -> buys BABYINU back and burns it (off)
-//   GAS_PCT           10  -> sold for ETH to pay for the payouts
+//   GAS_PCT           20  -> the TEAM'S cut: swapped to ETH and kept in the bot
+//                            wallet, which is also what pays every cycle's gas
 //
-// At REWARD2_SHARE_PCT=50 that is 30 NVDA / 30 AI / 30 BABYINU / 10 gas, all
-// three paid to holders.
+// So 20 NVDA / 20 AI / 20 BABYINU to holders, 20 BABYINU bought and kept, and
+// 20 to the team as ETH. There is no DEV_PAYOUT_ADDRESS and no dev remainder:
+// the owner wants the team's share in the dev wallet itself, as ETH, and the
+// gas leg already converts to ETH and keeps it there. Gas on this chain costs
+// about $2.50 a cycle at 100 holders and $22 at 1,000 (measured from live
+// receipts), so the rest of the 20% accumulates as the team's ETH.
+//
+// GAS_CEILING_ETH must stay 0 for this to hold: a ceiling stops the conversion
+// once the wallet has "enough" gas, and the team's cut would then sit as NVDA.
 //
 // The three BABYINU legs all BUY the token and differ only in what happens
 // next — kept, handed to holders, or destroyed — and each is its own number, so
@@ -104,11 +112,11 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // is also deliberately distinct from BURN_PCT: both buy BABYINU, but burning
 // removes it from supply while this hands it to holders — setting one does not
 // fund the other.
-const rewardPct = num(process.env.REWARD_PCT, 60);
-const ownTokenPct = num(process.env.OWN_TOKEN_PCT, 30);
-const buybackHoldPct = num(process.env.BUYBACK_HOLD_PCT, 0);
+const rewardPct = num(process.env.REWARD_PCT, 40);
+const ownTokenPct = num(process.env.OWN_TOKEN_PCT, 20);
+const buybackHoldPct = num(process.env.BUYBACK_HOLD_PCT, 20);
 const burnPct = num(process.env.BURN_PCT, 0);
-const gasPct = num(process.env.GAS_PCT, 10);
+const gasPct = num(process.env.GAS_PCT, 20);
 if (!(rewardPct >= 0 && rewardPct <= 100)) {
   throw new Error(`invalid split: REWARD_PCT(${rewardPct}) must be within [0, 100]`);
 }

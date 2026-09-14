@@ -45,7 +45,7 @@ app.use(
 app.get('/', (req, res) => {
   res.json({
     name: 'aibaby-api',
-    description: 'BABYINU market cap, holder count, and what holders were paid in NVDA, AI and BABYINU, for the Baby Artificial Inu site',
+    description: 'BABYINU market cap, holder count, what holders were paid in NVDA, AI and BABYINU, and the BABYINU bought back, for the Baby Artificial Inu site',
     token: { symbol: config.tokenSymbol, address: config.tokenAddress },
     endpoints: [
       'GET /token',

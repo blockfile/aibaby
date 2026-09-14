@@ -12,12 +12,12 @@ send them, and reports what it did to the site.
 BABYINU trades  →  creator fees accrue on-chain, denominated in NVDA
       ↓  sweep              push pending fees into the pons fee escrow
       ↓  claimToken(NVDA)   withdraw the escrow → the bot's wallet
-      ├─ 10% → sell for native ETH, so the bot can pay its own gas
-      ├─ 60% → to holders as NVDA and AI (REWARD_PCT, split by REWARD2_SHARE_PCT=50):
-      │        ├─ 30% airdropped as NVDA — no swap, fees already arrive in it
-      │        └─ 30% buys AI in the NVDA/AI v4 pool, and that AI is airdropped
-      ├─ 30% → buys BABYINU back on its own venue, and airdrops it (OWN_TOKEN_PCT)
-      ├─  0% → buys BABYINU back and keeps it: built, off (BUYBACK_HOLD_PCT=0)
+      ├─ 20% → the team's cut: sold for ETH, kept in the bot wallet, pays the gas (GAS_PCT)
+      ├─ 40% → to holders as NVDA and AI (REWARD_PCT, split by REWARD2_SHARE_PCT=50):
+      │        ├─ 20% airdropped as NVDA — no swap, fees already arrive in it
+      │        └─ 20% buys AI in the NVDA/AI v4 pool, and that AI is airdropped
+      ├─ 20% → buys BABYINU back on its own venue, and airdrops it (OWN_TOKEN_PCT)
+      ├─ 20% → buys BABYINU back and KEEPS it — buyback only (BUYBACK_HOLD_PCT)
       ├─  0% → buyback + burn: built, off (BURN_PCT=0)
       └─  0% → dev cut: whatever the others leave (none at the defaults)
 ```

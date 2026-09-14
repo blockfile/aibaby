@@ -22,16 +22,25 @@ function loadConfig(env = {}) {
   return require('./config');
 }
 
-test('the default split pays holders all three: NVDA, AI and bought-back BABYINU', () => {
-  // 60 to NVDA+AI (30/30 at REWARD2_SHARE_PCT=50), 30 buys BABYINU back and
-  // airdrops it, 10 funds gas. Keeping and burning are built but off.
+test('the default split is the four functions plus the team cut: 20 / 20 / 20 / 20 / 20', () => {
+  // 40 to NVDA+AI (20/20 at REWARD2_SHARE_PCT=50), 20 buys BABYINU for holders,
+  // 20 buys BABYINU and keeps it, 20 is the team's cut as ETH in the bot wallet.
   const config = loadConfig({ DRY_RUN: 'true' });
-  assert.strictEqual(config.rewardPct, 60);
-  assert.strictEqual(config.ownTokenPct, 30);
-  assert.strictEqual(config.buybackHoldPct, 0);
+  assert.strictEqual(config.rewardPct, 40);
+  assert.strictEqual(config.reward2SharePct, 50);
+  assert.strictEqual(config.ownTokenPct, 20);
+  assert.strictEqual(config.buybackHoldPct, 20);
   assert.strictEqual(config.burnPct, 0);
-  assert.strictEqual(config.gasPct, 10);
-  assert.strictEqual(config.devPct, 0);
+  assert.strictEqual(config.gasPct, 20);
+  assert.strictEqual(config.devPct, 0, 'no dev remainder: the team cut IS the gas leg');
+  assert.strictEqual(config.devPayoutAddress, null, 'and it is never forwarded elsewhere');
+});
+
+test('the team cut stays ETH only while GAS_CEILING_ETH is 0', () => {
+  // A ceiling stops converting once the wallet holds enough gas, which would
+  // leave the team's 20% sitting as NVDA. The shipped default must not do that.
+  const config = loadConfig({ DRY_RUN: 'true' });
+  assert.strictEqual(config.gasCeilingEth, 0);
 });
 
 test('the dev cut is whatever the other three legs leave behind', () => {
@@ -149,8 +158,8 @@ test('the second reward leg defaults to AI at half the holders share', () => {
   assert.strictEqual(config.reward2Symbol, 'AI');
   assert.strictEqual(config.reward2TokenAddress, '0x2e8c31162b855a2ffa90f6f8634643ad6f111e18');
   assert.strictEqual(config.reward2SharePct, 50);
-  // With REWARD_PCT=60 that is 30% of a claim as NVDA and 30% as AI.
-  assert.strictEqual(config.rewardPct, 60);
+  // With REWARD_PCT=40 that is 20% of a claim as NVDA and 20% as AI.
+  assert.strictEqual(config.rewardPct, 40);
 });
 
 test('an out-of-range second share is refused, not clamped', () => {

@@ -164,11 +164,12 @@ V4_BUYER_ADDRESS=0x5FCe84D38DD7707AC58bf8277859b384aa2158E8
 #     node scripts/deploy-disperser-v2.js --confirm
 DISPERSE_ADDRESS=
 
-REWARD_PCT=60        # to holders as NVDA + AI (30/30 at REWARD2_SHARE_PCT=50)
-OWN_TOKEN_PCT=30     # buys BABYINU back and airdrops it to holders
-BUYBACK_HOLD_PCT=0   # buy back and keep in the wallet: built, off
+REWARD_PCT=40        # to holders as NVDA + AI (20/20 at REWARD2_SHARE_PCT=50)
+OWN_TOKEN_PCT=20     # buys BABYINU back and airdrops it to holders
+BUYBACK_HOLD_PCT=20  # buys BABYINU back and keeps it (buyback only)
 BURN_PCT=0           # buy back and burn: built, off
-GAS_PCT=10
+GAS_PCT=20           # team's cut: swapped to ETH, kept in this wallet, pays gas
+GAS_CEILING_ETH=0    # must stay 0, or the team's cut stops converting to ETH
 MIN_HOLD=10000
 
 TRIGGER_MODE=accumulation

@@ -391,6 +391,59 @@ test('with BUYBACK_HOLD_PCT instead, NVDA and AI are paid and BABYINU is bought 
   }
 });
 
+test('all four functions in one cycle: NVDA, AI and BABYINU paid, BABYINU also bought and kept, team cut as ETH', async () => {
+  process.env.REWARD_PCT = '40';
+  process.env.OWN_TOKEN_PCT = '20';
+  process.env.BUYBACK_HOLD_PCT = '20';
+  process.env.BURN_PCT = '0';
+  process.env.GAS_PCT = '20';
+  const RELOAD = ['../config', '../evm/buyback', '../evm/devpayout', '../evm/rewardswap', './cycle'];
+  for (const m of RELOAD) delete require.cache[require.resolve(m)];
+  const cfg = require('../config');
+  const { runCycle: run } = require('./cycle');
+
+  try {
+    simvault.reset(10);
+    const cycle = await run();
+    assert.strictEqual(cycle.status, 'complete', cycle.error || '');
+    assert.strictEqual(cycle.quote_gas, 2, "20% converted to ETH — the team's cut, which also pays gas");
+    assert.ok(cycle.eth_received > 0);
+    assert.strictEqual(cycle.quote_distributed, 6, 'holders got 60%: 20 NVDA + 20 AI + 20 BABYINU');
+    assert.strictEqual(cycle.quote_own_token, 2);
+    assert.strictEqual(cycle.quote_bought_back, 2, '20% bought BABYINU and kept it');
+    assert.strictEqual(cycle.quote_burned, 0);
+
+    const swaps = cycle.steps.filter((s) => s.name === 'reward-swap');
+    assert.deepStrictEqual(swaps.map((s) => [s.detail.symbol, s.detail.quoteSpent]), [['NVDA', 2], ['AI', 2], [cfg.tokenSymbol, 2]]);
+
+    // Two separate BABYINU buys in one cycle. The airdrop must hand out ONLY the
+    // distribute buy — never the kept buy, which lands in the same wallet.
+    const ownBuy = swaps.find((s) => s.detail.symbol === cfg.tokenSymbol);
+    const hold = cycle.steps.find((s) => s.name === 'buyback-hold');
+    assert.strictEqual(hold.status, 'ok');
+    assert.ok(hold.detail.tokensBought > 0);
+    const air = await db.getDb().collection('airdrops').find({ cycle_id: cycle.id }).toArray();
+    const babyRaw = air
+      .filter((r) => r.reward_token.toLowerCase() === String(cfg.tokenAddress).toLowerCase())
+      .reduce((n, r) => n + BigInt(r.amount_raw), 0n);
+    assert.strictEqual(
+      babyRaw,
+      parseUnits(toUnitString(ownBuy.detail.tokensBought, cfg.tokenDecimals), cfg.tokenDecimals),
+      'holders received exactly the distribute buy, none of the kept buy'
+    );
+
+    // No dev leg is forwarded anywhere: there is no dev remainder at all.
+    assert.strictEqual(cycle.steps.find((s) => s.name === 'dev').status, 'skipped');
+  } finally {
+    process.env.REWARD_PCT = '65';
+    process.env.OWN_TOKEN_PCT = '0';
+    process.env.BUYBACK_HOLD_PCT = '0';
+    process.env.BURN_PCT = '25';
+    process.env.GAS_PCT = '10';
+    for (const m of RELOAD) delete require.cache[require.resolve(m)];
+  }
+});
+
 test('a dry run makes no network call — it completed with no RPC reachable', async () => {
   // The preceding tests all ran with DRY_RUN=true and no RPC available. If any
   // path had reached for the chain (decimals(), balanceOf(), getBalance()) they
