@@ -75,3 +75,19 @@ test('a cycle that distributed NOTHING does not move the marker', () => {
     assert.strictEqual(g.status, 'collecting');
   }
 });
+
+test('in token mode the fallback threshold is the token amount at the stored price', () => {
+  const { thresholdFallback } = require('./feegauge');
+  const cfg = { triggerMode: 'token', claimEveryTokens: 1, claimEveryUsd: 100 };
+  assert.strictEqual(thresholdFallback({ priceUsd: 221 }, cfg), 221);
+  // No price stored: CLAIM_EVERY_USD only as a last-resort denominator.
+  assert.strictEqual(thresholdFallback({}, cfg), 100);
+});
+
+test('the gauge serves the gate in NVDA and which gate it is', () => {
+  const { buildGauge } = require('./feegauge');
+  const g = buildGauge({ collectedUsd: 110, thresholdUsd: 221, thresholdQuote: 1, triggerMode: 'token', priceUsd: 221 }, 100);
+  assert.strictEqual(g.thresholdUsd, 221);
+  assert.strictEqual(g.thresholdQuote, 1);
+  assert.strictEqual(g.triggerMode, 'token');
+});

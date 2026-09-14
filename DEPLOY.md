@@ -164,22 +164,22 @@ V4_BUYER_ADDRESS=0x5FCe84D38DD7707AC58bf8277859b384aa2158E8
 #     node scripts/deploy-disperser-v2.js --confirm
 DISPERSE_ADDRESS=
 
-REWARD_PCT=40        # to holders as NVDA + AI (20/20 at REWARD2_SHARE_PCT=50)
-OWN_TOKEN_PCT=20     # buys BABYINU back and airdrops it to holders
-BUYBACK_HOLD_PCT=20  # buys BABYINU back and keeps it (buyback only)
-BURN_PCT=0           # buy back and burn: built, off
+REWARD_PCT=60        # to holders as NVDA + AI (30/30 at REWARD2_SHARE_PCT=50)
+OWN_TOKEN_PCT=0      # buy back and airdrop to holders: built, off
+BUYBACK_HOLD_PCT=0   # buy back and keep: built, off
+BURN_PCT=20          # buys BABYINU back and burns it
 GAS_PCT=20           # team's cut: swapped to ETH, kept in this wallet, pays gas
 GAS_CEILING_ETH=0    # must stay 0, or the team's cut stops converting to ETH
 MIN_HOLD=10000
 
-TRIGGER_MODE=accumulation
-CLAIM_EVERY_USD=100
-# How often the chain is read and the site's fee gauge written. Never pays.
+# Claim and distribute every 1 NVDA. No dollar gate, no price needed.
+TRIGGER_MODE=token
+CLAIM_EVERY_TOKENS=1
+# How often the chain is read and the site's fee gauge written.
 POLL_SCHEDULE=* * * * *
-# When a distribution may actually happen. Any cron string: */30 for every half
-# hour, */20 for every twenty minutes. A payout needs BOTH this schedule coming
-# round AND the fees clearing CLAIM_EVERY_USD.
-TRIGGER_SCHEDULE=*/30 * * * *
+# No time window: checked every minute, so a payout lands within a minute of
+# 1 NVDA accruing. Set a cron string here (e.g. 0 * * * * for hourly) to add one.
+TRIGGER_SCHEDULE=* * * * *
 
 MONGODB_URI=                   # from step 4
 MONGODB_DB=aibaby

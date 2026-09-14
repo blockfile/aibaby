@@ -50,17 +50,33 @@ function buildGauge(state, thresholdFallback) {
     accruedUsd: typeof s.accruedUsd === 'number' ? s.accruedUsd : null,
     pendingSweepUsd: typeof s.pendingSweepUsd === 'number' ? s.pendingSweepUsd : null,
     priceUsd: typeof s.priceUsd === 'number' ? s.priceUsd : null,
+    // The gate in the quote token's own unit (1 NVDA in token mode), and which
+    // gate it is, so a page can label the bar "1 NVDA" rather than a dollar
+    // figure that drifts with the price.
+    thresholdQuote: typeof s.thresholdQuote === 'number' && s.thresholdQuote > 0 ? s.thresholdQuote : null,
+    triggerMode: s.triggerMode ?? null,
     asOf: s.at ?? null,
   };
 }
 
+/** Pure: the dollar threshold to fall back on when the bot has not stored one. */
+function thresholdFallback(state, cfg = config) {
+  // Token mode fires on an amount, so its dollar threshold only exists at a
+  // price. CLAIM_EVERY_USD is meaningless in that mode; use it only as a last
+  // resort so the bar has SOME denominator rather than dividing by nothing.
+  if (cfg.triggerMode === 'token' && state && typeof state.priceUsd === 'number' && state.priceUsd > 0) {
+    return cfg.claimEveryTokens * state.priceUsd;
+  }
+  return cfg.claimEveryUsd;
+}
+
 async function fetchGauge() {
   const state = await repo.getDistributionState();
-  return buildGauge(state, config.claimEveryUsd);
+  return buildGauge(state, thresholdFallback(state));
 }
 
 // Short TTL: the site polls this often, and the underlying value only moves
 // when the bot ticks anyway.
 const getGauge = cached(10_000, fetchGauge);
 
-module.exports = { getGauge, fetchGauge, buildGauge, COLLECTING, DISTRIBUTING };
+module.exports = { getGauge, fetchGauge, buildGauge, thresholdFallback, COLLECTING, DISTRIBUTING };

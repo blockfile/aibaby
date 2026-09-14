@@ -486,7 +486,31 @@ test('token mode is NOT treated as interval mode', () => {
   assert.strictEqual(shouldFire({ claimableQuote: 0.0001, priceUsd: 150, ...TOKEN_GATE }).fire, false);
 });
 
-test('adding the mode does not change THIS deployment, which gates in USD', () => {
+test('THIS deployment gates on 1 NVDA, not on a dollar amount', () => {
   const config = require('../config');
-  assert.strictEqual(config.triggerMode, 'accumulation', 'the default is the USD gate');
+  assert.strictEqual(config.triggerMode, 'token', 'the default is the 1 NVDA gate');
+});
+
+// ── The gauge measures toward the gate that actually fires ───────────────────
+
+test('in token mode the gauge threshold is 1 NVDA at today\'s price, not CLAIM_EVERY_USD', () => {
+  const { gaugeThreshold } = require('./scheduler');
+  // The bar used to fill at $100 while the bot waited for 1 NVDA (~$220).
+  const t = gaugeThreshold({ triggerMode: 'token', claimEveryUsd: 100, claimEveryTokens: 1, priceUsd: 221 });
+  assert.strictEqual(t.thresholdUsd, 221);
+  assert.strictEqual(t.thresholdQuote, 1);
+});
+
+test('token mode with no price still knows its threshold in NVDA', () => {
+  const { gaugeThreshold } = require('./scheduler');
+  const t = gaugeThreshold({ triggerMode: 'token', claimEveryUsd: 100, claimEveryTokens: 1, priceUsd: null });
+  assert.strictEqual(t.thresholdUsd, null, 'no dollar figure without a price — never a guess');
+  assert.strictEqual(t.thresholdQuote, 1);
+});
+
+test('accumulation mode keeps its dollar threshold, and derives the NVDA one', () => {
+  const { gaugeThreshold } = require('./scheduler');
+  const t = gaugeThreshold({ triggerMode: 'accumulation', claimEveryUsd: 224, claimEveryTokens: 1, priceUsd: 224 });
+  assert.strictEqual(t.thresholdUsd, 224);
+  assert.strictEqual(t.thresholdQuote, 1);
 });

@@ -81,17 +81,18 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // simply not funded, and the cycle logs "burn share of this claim is zero" and
 // moves on. Setting BURN_PCT (and lowering REWARD_PCT to match) is all it takes
 // to switch it on; nothing else has to change.
-// Four functions, plus the team's cut. The split of every claim:
+// What the live server runs. The split of every claim:
 //
-//   REWARD_PCT        40  -> holders, as NVDA and AI (20 / 20 at REWARD2_SHARE_PCT=50)
-//   OWN_TOKEN_PCT     20  -> buys BABYINU back and AIRDROPS it to holders
-//   BUYBACK_HOLD_PCT  20  -> buys BABYINU back and KEEPS it (buyback only)
-//   BURN_PCT           0  -> buys BABYINU back and burns it (off)
+//   REWARD_PCT        60  -> holders, as NVDA and AI (30 / 30 at REWARD2_SHARE_PCT=50)
+//   OWN_TOKEN_PCT      0  -> buys BABYINU back and airdrops it to holders (off)
+//   BUYBACK_HOLD_PCT   0  -> buys BABYINU back and keeps it (off)
+//   BURN_PCT          20  -> buys BABYINU back and BURNS it
 //   GAS_PCT           20  -> the TEAM'S cut: swapped to ETH and kept in the bot
 //                            wallet, which is also what pays every cycle's gas
 //
-// So 20 NVDA / 20 AI / 20 BABYINU to holders, 20 BABYINU bought and kept, and
-// 20 to the team as ETH. There is no DEV_PAYOUT_ADDRESS and no dev remainder:
+// So 30 NVDA / 30 AI to holders, 20 buys BABYINU and burns it, and 20 to the
+// team as ETH. The other two BABYINU legs are built and tested and each is one
+// setting away. There is no DEV_PAYOUT_ADDRESS and no dev remainder:
 // the owner wants the team's share in the dev wallet itself, as ETH, and the
 // gas leg already converts to ETH and keeps it there. Gas on this chain costs
 // about $2.50 a cycle at 100 holders and $22 at 1,000 (measured from live
@@ -112,10 +113,10 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // is also deliberately distinct from BURN_PCT: both buy BABYINU, but burning
 // removes it from supply while this hands it to holders — setting one does not
 // fund the other.
-const rewardPct = num(process.env.REWARD_PCT, 40);
-const ownTokenPct = num(process.env.OWN_TOKEN_PCT, 20);
-const buybackHoldPct = num(process.env.BUYBACK_HOLD_PCT, 20);
-const burnPct = num(process.env.BURN_PCT, 0);
+const rewardPct = num(process.env.REWARD_PCT, 60);
+const ownTokenPct = num(process.env.OWN_TOKEN_PCT, 0);
+const buybackHoldPct = num(process.env.BUYBACK_HOLD_PCT, 0);
+const burnPct = num(process.env.BURN_PCT, 20);
 const gasPct = num(process.env.GAS_PCT, 20);
 if (!(rewardPct >= 0 && rewardPct <= 100)) {
   throw new Error(`invalid split: REWARD_PCT(${rewardPct}) must be within [0, 100]`);
@@ -161,11 +162,14 @@ if (!(reward2SharePct >= 0 && reward2SharePct <= 100)) {
   throw new Error(`invalid split: REWARD2_SHARE_PCT(${reward2SharePct}) must be within [0, 100]`);
 }
 
-// Accumulation is the default: this launch's fees are worth hundreds of dollars
-// per token, so firing on every tick would pay gas to move dust.
-const triggerMode = ['interval', 'accumulation', 'token'].includes(String(process.env.TRIGGER_MODE || '').toLowerCase())
+// Token is the default: claim and distribute every CLAIM_EVERY_TOKENS (1) NVDA.
+// It needs no price, so a DexScreener outage cannot hold a payout back, and one
+// NVDA is worth hundreds of dollars, so a cycle never pays gas to move dust.
+// Anything unrecognised falls back to the same default rather than throwing.
+const TRIGGER_MODES = ['interval', 'accumulation', 'token'];
+const triggerMode = TRIGGER_MODES.includes(String(process.env.TRIGGER_MODE || '').toLowerCase())
   ? String(process.env.TRIGGER_MODE).toLowerCase()
-  : 'accumulation';
+  : 'token';
 
 // Blockscout instance for Robinhood Chain — the holder count comes from here.
 const explorerApi = (process.env.EXPLORER_API || 'https://robinhoodchain.blockscout.com').replace(/\/$/, '');
@@ -407,7 +411,11 @@ const config = {
   // Prefer a divisor of 60. Cron's step operator restarts at the top of each
   // hour, so "*/45" fires at :00 and :45 and then jumps straight back to :00 —
   // a 45-minute gap followed by a 15-minute one, not every 45 minutes.
-  triggerSchedule: process.env.TRIGGER_SCHEDULE || '*/30 * * * *',
+  // Every minute, the same as the poll: there is no time window. The 1 NVDA gate
+  // is the only condition, so a payout lands within a minute of fees reaching it.
+  // planTasks collapses matching schedules into ONE firing task — two cron tasks
+  // on the same second would race for the run flag.
+  triggerSchedule: process.env.TRIGGER_SCHEDULE || '* * * * *',
   // The gate is denominated in USD, not tokens: fees accrue in NVDA and one
   // NVDA is worth hundreds of dollars, so a token threshold is unusable.
   claimEveryUsd: num(process.env.CLAIM_EVERY_USD, 100),

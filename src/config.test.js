@@ -12,7 +12,7 @@ const assert = require('node:assert');
 const OWNED = [
   'REWARD_PCT', 'BURN_PCT', 'GAS_PCT', 'TRIGGER_MODE', 'CLAIM_EVERY_USD', 'DEV_PAYOUT_ADDRESS',
   'POLL_SCHEDULE', 'TRIGGER_SCHEDULE', 'TOKEN_SYMBOL', 'MIN_HOLD',
-  'REWARD2_SHARE_PCT', 'REWARD2_TOKEN_ADDRESS', 'REWARD2_SYMBOL', 'OWN_TOKEN_PCT', 'BUYBACK_HOLD_PCT',
+  'REWARD2_SHARE_PCT', 'REWARD2_TOKEN_ADDRESS', 'REWARD2_SYMBOL', 'OWN_TOKEN_PCT', 'BUYBACK_HOLD_PCT', 'CLAIM_EVERY_TOKENS',
 ];
 
 function loadConfig(env = {}) {
@@ -22,15 +22,15 @@ function loadConfig(env = {}) {
   return require('./config');
 }
 
-test('the default split is the four functions plus the team cut: 20 / 20 / 20 / 20 / 20', () => {
-  // 40 to NVDA+AI (20/20 at REWARD2_SHARE_PCT=50), 20 buys BABYINU for holders,
-  // 20 buys BABYINU and keeps it, 20 is the team's cut as ETH in the bot wallet.
+test('the default split is what the server runs: 30 NVDA / 30 AI / 20 burn / 20 team', () => {
+  // 60 to NVDA+AI (30/30 at REWARD2_SHARE_PCT=50), 20 buys BABYINU and burns it,
+  // 20 is the team's cut as ETH in the bot wallet. No BABYINU rewards, none kept.
   const config = loadConfig({ DRY_RUN: 'true' });
-  assert.strictEqual(config.rewardPct, 40);
+  assert.strictEqual(config.rewardPct, 60);
   assert.strictEqual(config.reward2SharePct, 50);
-  assert.strictEqual(config.ownTokenPct, 20);
-  assert.strictEqual(config.buybackHoldPct, 20);
-  assert.strictEqual(config.burnPct, 0);
+  assert.strictEqual(config.ownTokenPct, 0);
+  assert.strictEqual(config.buybackHoldPct, 0);
+  assert.strictEqual(config.burnPct, 20);
   assert.strictEqual(config.gasPct, 20);
   assert.strictEqual(config.devPct, 0, 'no dev remainder: the team cut IS the gas leg');
   assert.strictEqual(config.devPayoutAddress, null, 'and it is never forwarded elsewhere');
@@ -75,17 +75,23 @@ test('legs that together exceed the claim are refused', () => {
   );
 });
 
-test('the trigger defaults to a 100 USD accumulation gate', () => {
+test('the trigger defaults to every 1 NVDA — no dollar gate, no price needed', () => {
   // No split overrides here — this case is about the trigger, and pinning a
   // REWARD_PCT that no longer fits the other defaults made it fail on the split.
   const config = loadConfig({ DRY_RUN: 'true' });
-  assert.strictEqual(config.triggerMode, 'accumulation');
-  assert.strictEqual(config.claimEveryUsd, 100);
+  assert.strictEqual(config.triggerMode, 'token');
+  assert.strictEqual(config.claimEveryTokens, 1);
 });
 
-test('an unknown TRIGGER_MODE falls back to accumulation rather than throwing', () => {
+test('an unknown TRIGGER_MODE falls back to the default rather than throwing', () => {
   const config = loadConfig({ TRIGGER_MODE: 'nonsense', DRY_RUN: 'true' });
+  assert.strictEqual(config.triggerMode, 'token');
+});
+
+test('accumulation mode is still a setting away', () => {
+  const config = loadConfig({ TRIGGER_MODE: 'accumulation', CLAIM_EVERY_USD: '224', DRY_RUN: 'true' });
   assert.strictEqual(config.triggerMode, 'accumulation');
+  assert.strictEqual(config.claimEveryUsd, 224);
 });
 
 test('DRY_RUN generates an ephemeral wallet when no key is set', () => {
@@ -118,13 +124,13 @@ test('the wallet is not enumerable, so serialising config cannot trigger it', ()
   process.env.DRY_RUN = 'true';
 });
 
-test('the poll looks every minute while the trigger fires every half hour', () => {
-  // Two schedules, because the poll does two jobs: it writes the fee gauge the
-  // site reads, and it decides whether to pay. Tying them together means either
-  // a frozen gauge or an hourly payout, never both.
+test('there is no time window: the poll and the trigger both run every minute', () => {
+  // The 1 NVDA gate is the only condition, so a payout lands within a minute of
+  // the fees reaching it. The schedules are still two settings, so a window
+  // (e.g. hourly) is a one-value change.
   const config = loadConfig({ DRY_RUN: 'true' });
   assert.strictEqual(config.pollSchedule, '* * * * *');
-  assert.strictEqual(config.triggerSchedule, '*/30 * * * *');
+  assert.strictEqual(config.triggerSchedule, '* * * * *');
 });
 
 test('the trigger cadence is an ordinary cron string, so any interval works', () => {
@@ -158,8 +164,8 @@ test('the second reward leg defaults to AI at half the holders share', () => {
   assert.strictEqual(config.reward2Symbol, 'AI');
   assert.strictEqual(config.reward2TokenAddress, '0x2e8c31162b855a2ffa90f6f8634643ad6f111e18');
   assert.strictEqual(config.reward2SharePct, 50);
-  // With REWARD_PCT=40 that is 20% of a claim as NVDA and 20% as AI.
-  assert.strictEqual(config.rewardPct, 40);
+  // With REWARD_PCT=60 that is 30% of a claim as NVDA and 30% as AI.
+  assert.strictEqual(config.rewardPct, 60);
 });
 
 test('an out-of-range second share is refused, not clamped', () => {

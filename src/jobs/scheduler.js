@@ -139,6 +139,25 @@ function shouldFire({ claimableQuote, priceUsd, triggerMode, claimEveryUsd, clai
  * Never allowed to break a cycle: this is display state. A Mongo hiccup while
  * recording "the tank is 80% full" must not stop the bot from claiming.
  */
+/**
+ * Pure: the threshold the gauge should draw, in the unit of the gate that fires.
+ *
+ * Token mode fires on a quote-token AMOUNT (1 NVDA), so the gauge's dollar
+ * threshold is that amount at today's price — not CLAIM_EVERY_USD, which token
+ * mode never reads. Recording CLAIM_EVERY_USD there drew a bar that filled at
+ * $100 while the bot kept waiting for 1 NVDA (~$220): "full" long before any
+ * payout could happen. Both units are recorded so a page can draw either.
+ *
+ * @returns {{thresholdUsd: number|null, thresholdQuote: number|null}}
+ */
+function gaugeThreshold({ triggerMode, claimEveryUsd, claimEveryTokens, priceUsd }) {
+  const priced = typeof priceUsd === 'number' && Number.isFinite(priceUsd) && priceUsd > 0;
+  if (triggerMode === 'token') {
+    return { thresholdUsd: priced ? claimEveryTokens * priceUsd : null, thresholdQuote: claimEveryTokens };
+  }
+  return { thresholdUsd: claimEveryUsd, thresholdQuote: priced ? claimEveryUsd / priceUsd : null };
+}
+
 async function recordGauge(patch) {
   try {
     await repo.setDistributionState(patch);
@@ -192,12 +211,15 @@ async function pollOnce(trigger, deps = {}) {
     }
     state.lastPriceUsd = priceUsd;
 
-    const gate = shouldFire({
-      claimableQuote: claimable,
-      priceUsd,
+    const gateConfig = {
       triggerMode: deps.triggerMode !== undefined ? deps.triggerMode : config.triggerMode,
       claimEveryUsd: deps.claimEveryUsd !== undefined ? deps.claimEveryUsd : config.claimEveryUsd,
       claimEveryTokens: deps.claimEveryTokens !== undefined ? deps.claimEveryTokens : config.claimEveryTokens,
+    };
+    const gate = shouldFire({
+      claimableQuote: claimable,
+      priceUsd,
+      ...gateConfig,
       symbol: config.quoteSymbol,
     });
     state.lastClaimableUsd = gate.usd;
@@ -221,7 +243,9 @@ async function pollOnce(trigger, deps = {}) {
       accruedUsd: priced ? accrued * priceUsd : null,
       pendingSweepUsd: priced ? Math.max(0, (accrued - claimable) * priceUsd) : null,
       priceUsd,
-      thresholdUsd: deps.claimEveryUsd !== undefined ? deps.claimEveryUsd : config.claimEveryUsd,
+      // The gate that actually fires, in both units — see gaugeThreshold.
+      ...gaugeThreshold({ ...gateConfig, priceUsd }),
+      triggerMode: gateConfig.triggerMode,
       // Only a tick that can actually pay may say so. The site holds its launch
       // animation on "distributing", and announcing it on a gauge tick would
       // promise a payout up to a whole trigger interval before one can happen.
@@ -402,5 +426,5 @@ function _resetState() {
 
 module.exports = {
   start, pause, resume, triggerNow, pollOnce, getState,
-  getClaimableQuote, shouldFire, planTasks, finishedGauge, _resetState,
+  getClaimableQuote, shouldFire, gaugeThreshold, planTasks, finishedGauge, _resetState,
 };
