@@ -22,13 +22,13 @@ function loadConfig(env = {}) {
   return require('./config');
 }
 
-test('the default split pays holders NVDA and AI, and KEEPS the bought-back BABYINU', () => {
+test('the default split pays holders all three: NVDA, AI and bought-back BABYINU', () => {
   // 60 to NVDA+AI (30/30 at REWARD2_SHARE_PCT=50), 30 buys BABYINU back and
-  // holds it, 10 funds gas. Nothing is airdropped in BABYINU and nothing burned.
+  // airdrops it, 10 funds gas. Keeping and burning are built but off.
   const config = loadConfig({ DRY_RUN: 'true' });
   assert.strictEqual(config.rewardPct, 60);
-  assert.strictEqual(config.buybackHoldPct, 30);
-  assert.strictEqual(config.ownTokenPct, 0);
+  assert.strictEqual(config.ownTokenPct, 30);
+  assert.strictEqual(config.buybackHoldPct, 0);
   assert.strictEqual(config.burnPct, 0);
   assert.strictEqual(config.gasPct, 10);
   assert.strictEqual(config.devPct, 0);

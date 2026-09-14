@@ -340,7 +340,7 @@ test('a three-asset cycle pays NVDA, AI AND bought-back BABYINU, each to the las
   }
 });
 
-test('the shipped split pays NVDA and AI, and buys BABYINU back WITHOUT paying it out', async () => {
+test('with BUYBACK_HOLD_PCT instead, NVDA and AI are paid and BABYINU is bought back WITHOUT paying it out', async () => {
   process.env.REWARD_PCT = '60';
   process.env.OWN_TOKEN_PCT = '0';
   process.env.BUYBACK_HOLD_PCT = '30';

@@ -81,15 +81,16 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // simply not funded, and the cycle logs "burn share of this claim is zero" and
 // moves on. Setting BURN_PCT (and lowering REWARD_PCT to match) is all it takes
 // to switch it on; nothing else has to change.
-// Holders are paid TWO assets, NVDA and AI. The split of every claim:
+// Holders are paid THREE assets: NVDA, AI and BABYINU. The split of every claim:
 //
 //   REWARD_PCT        60  -> holders, as NVDA and AI (divided by REWARD2_SHARE_PCT)
-//   BUYBACK_HOLD_PCT  30  -> buys BABYINU back and KEEPS it in the bot wallet
-//   OWN_TOKEN_PCT      0  -> buys BABYINU back and airdrops it to holders (off)
+//   OWN_TOKEN_PCT     30  -> buys BABYINU back and AIRDROPS it to holders
+//   BUYBACK_HOLD_PCT   0  -> buys BABYINU back and keeps it in the bot wallet (off)
 //   BURN_PCT           0  -> buys BABYINU back and burns it (off)
 //   GAS_PCT           10  -> sold for ETH to pay for the payouts
 //
-// At REWARD2_SHARE_PCT=50 that is 30 NVDA / 30 AI / 30 BABYINU kept / 10 gas.
+// At REWARD2_SHARE_PCT=50 that is 30 NVDA / 30 AI / 30 BABYINU / 10 gas, all
+// three paid to holders.
 //
 // The three BABYINU legs all BUY the token and differ only in what happens
 // next — kept, handed to holders, or destroyed — and each is its own number, so
@@ -104,8 +105,8 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // removes it from supply while this hands it to holders — setting one does not
 // fund the other.
 const rewardPct = num(process.env.REWARD_PCT, 60);
-const ownTokenPct = num(process.env.OWN_TOKEN_PCT, 0);
-const buybackHoldPct = num(process.env.BUYBACK_HOLD_PCT, 30);
+const ownTokenPct = num(process.env.OWN_TOKEN_PCT, 30);
+const buybackHoldPct = num(process.env.BUYBACK_HOLD_PCT, 0);
 const burnPct = num(process.env.BURN_PCT, 0);
 const gasPct = num(process.env.GAS_PCT, 10);
 if (!(rewardPct >= 0 && rewardPct <= 100)) {

@@ -316,7 +316,7 @@ test('OWN_TOKEN_PCT=0 plans no own-token leg at all', () => {
 
 // ── The kept buyback (BUYBACK_HOLD_PCT) ─────────────────────────────────────
 
-test('the shipped split: 30 NVDA / 30 AI to holders, 30 BABYINU bought and kept, 10 gas', () => {
+test('the keep variant (BUYBACK_HOLD_PCT=30): 30 NVDA / 30 AI to holders, 30 BABYINU bought and kept', () => {
   withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '0', BUYBACK_HOLD_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim, rewardLegPlan }, config) => {
     const s = splitClaim(100);
     assert.deepStrictEqual(s, { rewardQuote: 60, ownTokenQuote: 0, buybackHoldQuote: 30, burnQuote: 0, gasQuote: 10, devQuote: 0 });

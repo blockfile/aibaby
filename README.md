@@ -16,8 +16,8 @@ BABYINU trades  →  creator fees accrue on-chain, denominated in NVDA
       ├─ 60% → to holders as NVDA and AI (REWARD_PCT, split by REWARD2_SHARE_PCT=50):
       │        ├─ 30% airdropped as NVDA — no swap, fees already arrive in it
       │        └─ 30% buys AI in the NVDA/AI v4 pool, and that AI is airdropped
-      ├─ 30% → buys BABYINU back on its own venue and KEEPS it (BUYBACK_HOLD_PCT)
-      ├─  0% → buys BABYINU back and airdrops it: built, off (OWN_TOKEN_PCT=0)
+      ├─ 30% → buys BABYINU back on its own venue, and airdrops it (OWN_TOKEN_PCT)
+      ├─  0% → buys BABYINU back and keeps it: built, off (BUYBACK_HOLD_PCT=0)
       ├─  0% → buyback + burn: built, off (BURN_PCT=0)
       └─  0% → dev cut: whatever the others leave (none at the defaults)
 ```
