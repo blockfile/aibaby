@@ -327,7 +327,7 @@ async function main() {
   hr('OUR LEDGER (buyback + burn)');
   if (burns.status === 'rejected') console.log(`  FAILED: ${burns.reason.message}`);
   else {
-    console.log(`  totalBurned  : ${show(burns.value.totalBurned)} ${config.tokenSymbol} destroyed`);
+    console.log(`  totalBurned  : ${show(burns.value.totalBurned)} ${config.tokenSymbol} sent to ${config.deadAddress}`);
     console.log(`  cost         : ${show(burns.value.burnQuoteSpent)} NVDA across ${show(burns.value.burns)} buybacks`);
   }
 

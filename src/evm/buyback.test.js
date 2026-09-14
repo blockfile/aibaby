@@ -150,3 +150,39 @@ test('the failure message does not promise an automatic retry', () => {
   assert.doesNotMatch(out, /retried next cycle/);
   assert.match(out, /NOT auto-retried/);
 });
+
+// ── The burn is a transfer to 0x…dEaD ─────────────────────────────────────────
+
+test('the burn sends the tokens to the dead address, never calls burn()', async () => {
+  const { burnToken } = require('./buyback');
+  const calls = [];
+  const contract = {
+    transfer: async (to, raw) => { calls.push(['transfer', to, raw]); return { hash: '0xburn', wait: async () => {} }; },
+    burn: async () => { throw new Error('burn() must not be called'); },
+  };
+  const hash = await burnToken(
+    { token: '0xtoken', raw: 626015n },
+    { contractFor: () => contract, sendTx: (fn) => fn() }
+  );
+  assert.strictEqual(hash, '0xburn');
+  assert.deepStrictEqual(calls, [['transfer', '0x000000000000000000000000000000000000dead', 626015n]]);
+});
+
+test('the dead address is the configured default, and is excluded from airdrops', async () => {
+  const config = require('../config');
+  assert.strictEqual(config.deadAddress, '0x000000000000000000000000000000000000dead');
+  const { buildExcludeSet } = require('./exclude');
+  const set = await buildExcludeSet();
+  assert.ok(set.has(config.deadAddress), 'burned tokens must never be paid a reward');
+});
+
+test('a failed burn transfer is retried, then rethrown', async () => {
+  const { burnToken, BURN_ATTEMPTS } = require('./buyback');
+  let n = 0;
+  const contract = { transfer: async () => { n += 1; throw new Error('could not coalesce error'); } };
+  await assert.rejects(
+    () => burnToken({ token: '0xtoken', raw: 1n }, { contractFor: () => contract, sendTx: (fn) => fn(), retryDelayMs: 0 }),
+    /coalesce/
+  );
+  assert.strictEqual(n, BURN_ATTEMPTS);
+});

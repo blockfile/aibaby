@@ -354,6 +354,8 @@ const config = {
   feeEscrow: lowerOr(process.env.FEE_ESCROW, '0xd3afeb2a57f70ef218aa82451c51b2fb0416ac9e'),
   buybackVault: lowerOr(process.env.BUYBACK_VAULT, '0x42df2a798f82289e177311362e8f5ccc45c1219c'),
   poolManager: lowerOr(process.env.POOL_MANAGER, '0x8366a39cc670b4001a1121b8f6a443a643e40951'),
+  // Where the burn leg sends what it buys, and excluded from every airdrop so
+  // burned tokens never take a share of a reward.
   deadAddress: lowerOr(process.env.DEAD_ADDRESS, '0x000000000000000000000000000000000000dead'),
 
   // ── Bot: split and eligibility ─────────────────────────────────────────────

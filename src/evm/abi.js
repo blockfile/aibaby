@@ -87,10 +87,9 @@ const ERC20_ABI = [
   'function transfer(address to, uint256 value) returns (bool)',
   'function approve(address spender, uint256 value) returns (bool)',
   'function allowance(address owner, address spender) view returns (uint256)',
-  // pons v2 tokens expose a real burn. Verified against a live launch: calling
-  // it reverts with ERC20InsufficientBalance rather than an unknown selector,
-  // so the function exists. Burning REDUCES totalSupply, which a transfer to a
-  // dead address does not — holders can see the supply shrink on the explorer.
+  // pons v2 tokens expose a real burn (it reverts ERC20InsufficientBalance, not
+  // an unknown selector). The buyback does NOT use it: burns are a transfer to
+  // the dead address — see evm/buyback.js.
   'function burn(uint256 value)',
 ];
 

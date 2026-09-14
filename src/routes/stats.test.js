@@ -196,12 +196,12 @@ test('a real zero burn total is preserved, not treated as missing', () => {
   assert.strictEqual(out.totalBurnedUsd, 0);
 });
 
-test('burned share of supply adds back what was destroyed', () => {
-  // The explorer reports CIRCULATING supply, which the burn already reduced.
-  // 900 remaining + 100 burned = 1000 originally, so 10%.
+test('burned share of supply is over the unchanged totalSupply', () => {
+  // Burns go to 0x…dEaD, so totalSupply still includes them: 100 of 1000 is 10%.
+  // Adding the burned tokens back on top would report 9.09%.
   const out = buildStats({
     market: {},
-    token: { totalSupply: (900n * 10n ** 18n).toString(), decimals: 18 },
+    token: { totalSupply: (1000n * 10n ** 18n).toString(), decimals: 18 },
     burns: { totalBurned: 100, burnQuoteSpent: 1, burns: 1 },
     symbol: 'BABYINU',
   });

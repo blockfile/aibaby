@@ -43,12 +43,13 @@ function burnedUsd(burns, priceUsd) {
 function burnedPctOfSupply(burns, token) {
   if (typeof burns.totalBurned !== 'number') return null;
   if (token.totalSupply == null || token.decimals == null) return null;
+  // Burns are transfers to 0x…dEaD, which leave totalSupply unchanged — the
+  // burned tokens are still inside it, so it IS the original supply. Adding
+  // them back (right for burn(uint256), which shrinks supply) would count them
+  // twice and understate the share.
   const minted = Number(BigInt(token.totalSupply)) / 10 ** token.decimals;
-  // The explorer reports CIRCULATING supply, which a burn has already reduced —
-  // so the denominator is what remains plus what we destroyed.
-  const original = minted + burns.totalBurned;
-  if (!(original > 0)) return null;
-  return (burns.totalBurned / original) * 100;
+  if (!(minted > 0)) return null;
+  return (burns.totalBurned / minted) * 100;
 }
 
 /**

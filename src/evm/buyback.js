@@ -17,10 +17,11 @@
 // return value, so a fee-on-transfer or rounding surprise cannot make the bot
 // try to burn more than it actually received.
 //
-// The burn is a real `burn(uint256)` on the token — verified present on a live
-// pons v2 launch — not a transfer to a dead address. It reduces totalSupply, so
-// holders can watch the supply shrink on the explorer, and the burned tokens
-// stop appearing in holder snapshots entirely.
+// The burn is a transfer to the dead address (0x…dEaD), not the token's
+// `burn(uint256)`. The tokens leave circulation for good — nobody holds that
+// key — and every explorer labels the transfer a burn, but totalSupply does NOT
+// drop: the dead address shows up as a holder, and is excluded from every
+// airdrop (exclude.js) so it never takes a share of a reward.
 
 const { Contract, parseUnits, formatUnits } = require('ethers');
 const config = require('../config');
@@ -143,7 +144,8 @@ async function buyToken({ launch, quoteAmountRaw }) {
 }
 
 /**
- * Burn `raw` base units of the launch token held by this wallet.
+ * Burn `raw` base units of the launch token held by this wallet, by sending
+ * them to the dead address.
  *
  * Retried like the buy is. A live cycle bought 626,015 tokens and then lost
  * them to a single "could not coalesce error" — an ethers-level RPC hiccup, not
@@ -151,18 +153,22 @@ async function buyToken({ launch, quoteAmountRaw }) {
  * attempts and the burn none meant one blip stranded everything it had just
  * bought.
  */
-async function burnToken({ token, raw }) {
+async function burnToken({ token, raw }, deps = {}) {
+  const contractFor = deps.contractFor || ((t) => new Contract(t, ERC20_ABI, wallet));
+  const send = deps.sendTx || sendTx;
+  const to = deps.deadAddress || config.deadAddress;
+  const delayMs = deps.retryDelayMs !== undefined ? deps.retryDelayMs : 3000;
   let lastErr;
   for (let attempt = 1; attempt <= BURN_ATTEMPTS; attempt += 1) {
     try {
-      const tx = await sendTx(() => new Contract(token, ERC20_ABI, wallet).burn(raw));
+      const tx = await send(() => contractFor(token).transfer(to, raw));
       await tx.wait();
-      console.log(`[tx] burn ${raw} of ${token}: ${tx.hash}`);
+      console.log(`[tx] burn ${raw} of ${token} -> ${to}: ${tx.hash}`);
       return tx.hash;
     } catch (err) {
       lastErr = err;
       console.warn(`[buyback] burn attempt ${attempt}/${BURN_ATTEMPTS} failed: ${err.shortMessage || err.message}`);
-      if (attempt < BURN_ATTEMPTS) await new Promise((r) => setTimeout(r, 3000));
+      if (attempt < BURN_ATTEMPTS) await new Promise((r) => setTimeout(r, delayMs));
     }
   }
   throw lastErr;

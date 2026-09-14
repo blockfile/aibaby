@@ -167,7 +167,7 @@ DISPERSE_ADDRESS=
 REWARD_PCT=60        # to holders as NVDA + AI (30/30 at REWARD2_SHARE_PCT=50)
 OWN_TOKEN_PCT=0      # buy back and airdrop to holders: built, off
 BUYBACK_HOLD_PCT=0   # buy back and keep: built, off
-BURN_PCT=20          # buys BABYINU back and burns it
+BURN_PCT=20          # buys BABYINU back and sends it to 0x…dEaD
 GAS_PCT=20           # team's cut: swapped to ETH, kept in this wallet, pays gas
 GAS_CEILING_ETH=0    # must stay 0, or the team's cut stops converting to ETH
 MIN_HOLD=10000
@@ -353,7 +353,7 @@ curl -H "x-api-key: $API_KEY" -X POST http://127.0.0.1:3100/run
 ```
 
 A rehearsed cycle claims NVDA, sells a slice for gas, airdrops NVDA to holders,
-then buys BABYINU with the burn share and destroys it. The `reward-swap` step is
+then buys BABYINU with the burn share and sends it to `0x…dEaD`. The `reward-swap` step is
 recorded but does nothing while the reward token IS the quote token: there is
 nothing to swap, so it reports the claim straight through with no signature.
 A `reward-swap` with a transaction hash means `REWARD_TOKEN_ADDRESS` points at

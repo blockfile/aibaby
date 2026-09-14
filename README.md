@@ -31,16 +31,13 @@ through paying people.
 exactly what half the holders' share is paid in — so slippage, quoting and venue dispatch exist
 only for the buyback, and a bad swap can never strand a holder payout.
 
-**The buyback is off by choice, not missing.** `BURN_PCT=0`, so every NVDA
-claimed goes to holders or to the gas that delivers it, and no cycle spends a
-quarter of the claim buying its own token back. The machinery is intact and
-tested — `evm/buyback.js`, a real `burn(uint256)` that reduces `totalSupply`
-rather than a transfer to a dead address — it is simply not funded. Each cycle
-records `burn share of this claim is zero` and moves on.
-
-Funding it is one value: set `BURN_PCT` and lower `REWARD_PCT` to match. Until
-then `totalBurned`, `burnedPctOfSupply` and `GET /burns` all report zero, and a
-site rendering burn tiles should hide them rather than show a permanent 0.
+**The burn sends to the dead address.** `BURN_PCT` buys the token back and
+transfers it to `0x000000000000000000000000000000000000dEaD` (`DEAD_ADDRESS`),
+not the token's `burn(uint256)`. Explorers label it a burn and nobody can move
+those tokens again, but `totalSupply` does not drop: the dead address appears
+as a holder and is excluded from every airdrop, and `burnedPctOfSupply` is
+measured against the unchanged supply. At `BURN_PCT=0` each cycle records
+`burn share of this claim is zero` and `totalBurned` stays zero.
 
 ## Two processes, one database
 
