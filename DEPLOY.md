@@ -1,13 +1,13 @@
-# Deploying artificialcat to Ubuntu 24.04
+# Deploying aibaby to Ubuntu 24.04
 
-Site: **https://artificialcat.meme** · API: **https://api.artificialcat.meme**
+Site: **https://babyartificialinu.com** · API: **https://api.babyartificialinu.com**
 
-Two PM2 processes over one MongoDB, from `/var/www/artificialcat`:
+Two PM2 processes over one MongoDB, from `/var/www/aibaby`:
 
 | Process | Port | Reachable from |
 | --- | --- | --- |
-| `artificialcat-api` (`server.js`) | 3000 | the internet, via nginx → `api.artificialcat.meme` |
-| `artificialcat-bot` (`bot.js`) | 3100 | **localhost only** — never proxied |
+| `aibaby-api` (`server.js`) | 3000 | the internet, via nginx → `api.babyartificialinu.com` |
+| `aibaby-bot` (`bot.js`) | 3100 | **localhost only** — never proxied |
 
 The bot holds the wallet key and `POST /run` pays real money out, so its port
 stays off the internet. Do not collapse the two back into one process.
@@ -24,8 +24,8 @@ transfer graph. The **disperser is per-project**: it is the recorded sender of
 every payout, so sharing one links the projects on any bubblemap. Deploy one at
 go-live with `node scripts/deploy-disperser-v2.js --confirm`.
 
-**Before you start:** point a DNS `A` record for `api.artificialcat.meme` at the
-server's public IP and let it propagate (`dig +short api.artificialcat.meme`). Certbot
+**Before you start:** point a DNS `A` record for `api.babyartificialinu.com` at the
+server's public IP and let it propagate (`dig +short api.babyartificialinu.com`). Certbot
 cannot issue a certificate until it resolves.
 
 ## 1. Base prep
@@ -81,7 +81,7 @@ Skip straight to the next step and put the connection string in `.env` later:
 
 ```ini
 MONGODB_URI=mongodb+srv://user:pass@cluster.xxxxx.mongodb.net/?retryWrites=true&w=majority
-MONGODB_DB=artificialcat
+MONGODB_DB=aibaby
 ```
 
 **Allowlist the server's IP in the provider's network settings.** This is the
@@ -107,9 +107,9 @@ which is what you want.
 ## 5. Clone into /var/www
 
 ```bash
-mkdir -p /var/www/artificialcat
-cd /var/www/artificialcat
-git clone https://github.com/blockfile/cat.git .
+mkdir -p /var/www/aibaby
+cd /var/www/aibaby
+git clone https://github.com/blockfile/aibaby.git .
 npm ci --omit=dev
 ```
 
@@ -120,7 +120,7 @@ package-lock.json` — which looks like a broken repo and is not.
 ## 6. Configure
 
 ```bash
-cd /var/www/artificialcat
+cd /var/www/aibaby
 cp .env.example .env
 nano .env
 chmod 600 .env
@@ -132,7 +132,7 @@ Values for this deployment:
 PORT=3000
 BOT_PORT=3100
 
-TOKEN_ADDRESS=                 # blank until ARTCAT launches
+TOKEN_ADDRESS=                 # blank until BABYAI launches
 WALLET_PRIVATE_KEY=            # the creator wallet — set at go-live, not now
 DRY_RUN=true
 
@@ -179,9 +179,9 @@ POLL_SCHEDULE=* * * * *
 TRIGGER_SCHEDULE=*/30 * * * *
 
 MONGODB_URI=                   # from step 4
-MONGODB_DB=artificialcat
+MONGODB_DB=aibaby
 API_KEY=                       # any long random string; guards the bot's /run
-CORS_ORIGINS=https://artificialcat.meme,https://www.artificialcat.meme
+CORS_ORIGINS=https://babyartificialinu.com,https://www.babyartificialinu.com
 ```
 
 Generate the API key rather than inventing one:
@@ -200,7 +200,7 @@ run against a fake, but it is easier not to paste one.
 The repo ships `ecosystem.config.js`, so both processes start together.
 
 ```bash
-cd /var/www/artificialcat
+cd /var/www/aibaby
 pm2 start ecosystem.config.js
 pm2 save
 pm2 status
@@ -230,14 +230,14 @@ apt install -y nginx
 This proxies **only** port 3000. The bot's 3100 is deliberately absent.
 
 ```bash
-tee /etc/nginx/sites-available/api.artificialcat.meme > /dev/null <<'NGINX'
+tee /etc/nginx/sites-available/api.babyartificialinu.com > /dev/null <<'NGINX'
 server {
     listen 80;
     listen [::]:80;
-    server_name api.artificialcat.meme;
+    server_name api.babyartificialinu.com;
 
-    access_log /var/log/nginx/artificialcat.access.log;
-    error_log  /var/log/nginx/artificialcat.error.log;
+    access_log /var/log/nginx/aibaby.access.log;
+    error_log  /var/log/nginx/aibaby.error.log;
 
     client_max_body_size 1m;
 
@@ -255,24 +255,24 @@ server {
 }
 NGINX
 
-ln -s /etc/nginx/sites-available/api.artificialcat.meme /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/api.babyartificialinu.com /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
-curl http://api.artificialcat.meme/health
+curl http://api.babyartificialinu.com/health
 ```
 
 ## 9. Certbot / HTTPS
 
-The site is HTTPS, so the API must be — a browser on `https://artificialcat.meme`
-refuses to fetch `http://api.artificialcat.meme` as mixed content.
+The site is HTTPS, so the API must be — a browser on `https://babyartificialinu.com`
+refuses to fetch `http://api.babyartificialinu.com` as mixed content.
 
 ```bash
 snap install core && snap refresh core
 snap install --classic certbot
 ln -sf /snap/bin/certbot /usr/bin/certbot
 
-certbot --nginx -d api.artificialcat.meme --redirect \
+certbot --nginx -d api.babyartificialinu.com --redirect \
   -m you@example.com --agree-tos --no-eff-email
 
 certbot renew --dry-run
@@ -282,17 +282,17 @@ systemctl list-timers | grep certbot
 ## 10. Verify
 
 ```bash
-curl https://api.artificialcat.meme/health
-curl https://api.artificialcat.meme/token
-curl https://api.artificialcat.meme/stats
-curl "https://api.artificialcat.meme/rewards?limit=5"
+curl https://api.babyartificialinu.com/health
+curl https://api.babyartificialinu.com/token
+curl https://api.babyartificialinu.com/stats
+curl "https://api.babyartificialinu.com/rewards?limit=5"
 
 # CORS — must echo the site's origin back
-curl -s -H "Origin: https://artificialcat.meme" -D- -o /dev/null \
-  https://api.artificialcat.meme/stats | grep -i access-control-allow-origin
+curl -s -H "Origin: https://babyartificialinu.com" -D- -o /dev/null \
+  https://api.babyartificialinu.com/stats | grep -i access-control-allow-origin
 
 # The bot must NOT be reachable from outside
-curl -m 5 http://api.artificialcat.meme:3100/status   # must fail or time out
+curl -m 5 http://api.babyartificialinu.com:3100/status   # must fail or time out
 ```
 
 A 403 on the CORS check means the origin is missing from `CORS_ORIGINS` — the
@@ -303,7 +303,7 @@ normaliser reads `json.data ?? json.rewards ?? json` and throws on anything that
 is not an array, so a missing `data` renders as "Unexpected rewards payload
 shape" against a perfectly healthy API.
 
-Then point the site at it (`VITE_API_BASE_URL=https://api.artificialcat.meme`,
+Then point the site at it (`VITE_API_BASE_URL=https://api.babyartificialinu.com`,
 `VITE_USE_MOCK=false`) and redeploy the frontend.
 
 ## 11. Dry run
@@ -315,7 +315,7 @@ against an in-memory fee vault. No key, no RPC and no funds are involved.
 refuses immediately:
 
 ```json
-{"status":"failed","error":"TOKEN_ADDRESS (ARTCAT) is required"}
+{"status":"failed","error":"TOKEN_ADDRESS (BABYAI) is required"}
 ```
 
 That is correct — it will not pretend to work on a token that does not exist.
@@ -323,12 +323,12 @@ To rehearse the flow before launch, point it at any address: DRY_RUN simulates
 the launch record too, so it need not be a real token.
 
 ```bash
-cd /var/www/artificialcat
+cd /var/www/aibaby
 export API_KEY=$(grep -E '^API_KEY=' .env | cut -d= -f2-)
 
 # a placeholder, purely to exercise the cycle
 sed -i 's/^TOKEN_ADDRESS=.*/TOKEN_ADDRESS=0x0000000000000000000000000000000000000001/' .env
-pm2 restart artificialcat-bot --update-env
+pm2 restart aibaby-bot --update-env
 
 # WAIT for the port. `pm2 restart` returns as soon as it signals the process,
 # but the bot connects to MongoDB BEFORE it listens on 3100 — on a hosted URI
@@ -340,7 +340,7 @@ curl -H "x-api-key: $API_KEY" -X POST http://127.0.0.1:3100/run
 ```
 
 A rehearsed cycle claims NVDA, sells a slice for gas, airdrops NVDA to holders,
-then buys ARTCAT with the burn share and destroys it. The `reward-swap` step is
+then buys BABYAI with the burn share and destroys it. The `reward-swap` step is
 recorded but does nothing while the reward token IS the quote token: there is
 nothing to swap, so it reports the claim straight through with no signature.
 A `reward-swap` with a transaction hash means `REWARD_TOKEN_ADDRESS` points at
@@ -355,7 +355,7 @@ Put the blank back when you are done:
 
 ```bash
 sed -i 's/^TOKEN_ADDRESS=.*/TOKEN_ADDRESS=/' .env
-pm2 restart artificialcat-bot --update-env
+pm2 restart aibaby-bot --update-env
 ```
 
 ## 12. Going live (after launch)
@@ -366,7 +366,7 @@ the address you think it does before the key for that address is in a file on a
 server:
 
 ```bash
-cd /var/www/artificialcat
+cd /var/www/aibaby
 node scripts/claimable.js 0xYOUR_TOKEN
 ```
 
@@ -386,12 +386,12 @@ Fund the wallet with **ETH for gas** — the bot's income is NVDA and cannot pay
 for its own first transaction. Then:
 
 ```bash
-pm2 restart artificialcat-bot --update-env   # still DRY_RUN=true
+pm2 restart aibaby-bot --update-env   # still DRY_RUN=true
 curl -H "x-api-key: $API_KEY" -X POST http://127.0.0.1:3100/run
 # read the cycle, then:
 nano .env      # DRY_RUN=false
-pm2 restart artificialcat-bot --update-env
-pm2 logs artificialcat-bot
+pm2 restart aibaby-bot --update-env
+pm2 logs aibaby-bot
 ```
 
 Stop the schedule at any time without touching the public API:
@@ -403,17 +403,17 @@ curl -H "x-api-key: $API_KEY" -X POST http://127.0.0.1:3100/pause
 ## Redeploying
 
 ```bash
-cd /var/www/artificialcat
+cd /var/www/aibaby
 git pull
 npm ci --omit=dev
-pm2 restart artificialcat-api artificialcat-bot --update-env
+pm2 restart aibaby-api aibaby-bot --update-env
 
 # WAIT before checking anything. `pm2 restart` returns as soon as it signals the
 # process, but BOTH processes connect to MongoDB before they listen — on a
 # hosted URI that is a remote round trip. A curl on the next line gets a 502
 # from nginx, or an empty body, from an API that is starting perfectly normally.
-until curl -sf https://api.artificialcat.meme/health >/dev/null; do sleep 1; done
-curl -s https://api.artificialcat.meme/stats | head -c 200
+until curl -sf https://api.babyartificialinu.com/health >/dev/null; do sleep 1; done
+curl -s https://api.babyartificialinu.com/stats | head -c 200
 ```
 
 ## Operational watch-list
@@ -429,7 +429,7 @@ curl -s https://api.artificialcat.meme/stats | head -c 200
 - **The `reward-swap` line.** It is the leg with no production history. A cycle
   that claims and then buys nothing pays nobody, so it is the first thing to
   read in a quiet cycle.
-- **`MIN_HOLD`.** 10,000 ARTCAT, matching what the site advertises. Lowering it
+- **`MIN_HOLD`.** 10,000 BABYAI, matching what the site advertises. Lowering it
   toward 1 pays dust to nearly every wallet and multiplies per-cycle gas.
 - **Two reward assets means two payout passes.** Every cycle airdrops NVDA and
   then AI, so the transfer count per cycle doubles while `GAS_PCT` stays at 10.

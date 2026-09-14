@@ -3,7 +3,7 @@
 //   pm2 start ecosystem.config.js
 //
 // `cwd` is deliberately omitted: PM2 resolves scripts relative to this file, so
-// the same config works in /var/www/artificialcat and on a laptop.
+// the same config works in /var/www/aibaby and on a laptop.
 //
 // exec_mode is fork, NOT cluster, and instances is 1, for both. Cluster mode
 // would give the API workers separate in-memory caches for no gain, and would
@@ -12,7 +12,7 @@
 module.exports = {
   apps: [
     {
-      name: 'artificialcat-api',
+      name: 'aibaby-api',
       script: 'server.js',
       exec_mode: 'fork',
       instances: 1,
@@ -25,7 +25,7 @@ module.exports = {
       max_restarts: 10,
     },
     {
-      name: 'artificialcat-bot',
+      name: 'aibaby-bot',
       script: 'bot.js',
       exec_mode: 'fork',
       instances: 1,

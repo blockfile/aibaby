@@ -58,6 +58,6 @@ test('a burn row names both tickers', () => {
   const config = require('../config');
   assert.strictEqual(config.quoteSymbol, 'NVDA');
   const row = toRow({ id: 1, signature: '0x' + 'a'.repeat(64), detail: { tokensBought: 5, quoteSpent: 1 } });
-  assert.strictEqual(row.symbol, 'ARTCAT', 'what was destroyed');
+  assert.strictEqual(row.symbol, 'BABYAI', 'what was destroyed');
   assert.strictEqual(row.quoteSymbol, 'NVDA', 'what paid for it');
 });

@@ -2,7 +2,7 @@
 
 // Buy a REWARD token with claimed quote.
 //
-// Artificial Cat pays holders TWO assets: NVDA, which the fees already arrive
+// Artificial Baby Inu pays holders TWO assets: NVDA, which the fees already arrive
 // in and which therefore needs no swap at all, and AI, which has to be bought
 // first. Both go through here — the leg being paid is passed in, so the same
 // code serves the asset that needs a DEX and the one that does not, and adding

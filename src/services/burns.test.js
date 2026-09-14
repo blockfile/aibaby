@@ -19,7 +19,7 @@ let fetchBurns;
 test.before(async () => {
   mongod = await MongoMemoryServer.create();
   process.env.MONGODB_URI = mongod.getUri();
-  process.env.MONGODB_DB = 'artificialcat_burns_test';
+  process.env.MONGODB_DB = 'aibaby_burns_test';
   for (const m of ['./../config', '../db/index', '../db/repository', './burns']) {
     delete require.cache[require.resolve(m)];
   }

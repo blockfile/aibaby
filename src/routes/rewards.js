@@ -87,7 +87,7 @@ function presentPage(page) {
     //   `rows`         — the cursor-paging frontends (epoch-ms `at`)
     transactions,
     items: transactions,
-    //   `data` + `meter` — the Neko-template site (the Artificial Cat site at
+    //   `data` + `meter` — the Neko-template site (the Cat-template site at
     //     BullTismClone3 does not read this endpoint at all; its ENDPOINTS map
     //     is /token and /stats only). Its normaliser reads
     //     `json.data ?? json.rewards ?? json` and THROWS on anything that is
@@ -119,7 +119,7 @@ router.get('/rewards', async (req, res) => {
   } catch (err) {
     // Nothing cached for this page and the upstream is down. A 502 makes the
     // site show its retry state; an empty 200 would read as "no payouts yet".
-    console.warn('[artificialcat] rewards feed unavailable:', err.message);
+    console.warn('[aibaby] rewards feed unavailable:', err.message);
     res.status(502).json({ error: 'rewards feed unavailable' });
   }
 });
@@ -168,7 +168,7 @@ router.get('/rewards/meter', async (req, res) => {
     // The meter has no honest empty state — its normaliser throws without a
     // pot — so a 502 gives the panel its retry button rather than a zeroed
     // gauge that looks like a stalled bot.
-    console.warn('[artificialcat] fee meter unavailable:', err.message);
+    console.warn('[aibaby] fee meter unavailable:', err.message);
     res.status(502).json({ error: 'fee meter unavailable' });
   }
 });

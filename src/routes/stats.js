@@ -27,7 +27,7 @@ const { getCreatorFees } = require('../services/creatorfees');
 const router = express.Router();
 
 /**
- * Pure: what the burned ARTCAT is worth at the CURRENT price.
+ * Pure: what the burned BABYAI is worth at the CURRENT price.
  *
  * Deliberately distinct from `burnQuoteSpent`, which is what the buybacks
  * actually cost in NVDA. The two answer different questions and drift apart as
@@ -143,7 +143,7 @@ function buildStats({
   const marketCap = market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token);
   return {
     marketCap,
-    // ── The Artificial Cat site (its src/api/stats.js) ─────────────────────
+    // ── The Cat-template site (its src/api/stats.js) ─────────────────────
     // Reads exactly these four and renders any non-number as "—":
     //   marketCapUsd, nvdaDistributed (TOKENS — the panel appends "$NVDA"),
     //   nvdaDistributedUsd ("≈ $… routed to holders"), totalHolders.
@@ -199,7 +199,7 @@ function buildStats({
     // NVDA token amount that `totalRewarded` carries.
     totalDistributed: totalRewardedUsd,
     // ── Buyback + burn ──────────────────────────────────────────────────────
-    // ARTCAT tokens destroyed. The headline number for the burn tile.
+    // BABYAI tokens destroyed. The headline number for the burn tile.
     totalBurned: burns.totalBurned ?? null,
     // What those buybacks cost, in NVDA — what was actually spent.
     burnQuoteSpent: burns.burnQuoteSpent ?? null,
@@ -270,31 +270,31 @@ router.get('/stats', async (req, res, next) => {
     const creatorFees = feesResult.status === 'fulfilled' ? feesResult.value : {};
 
     if (marketResult.status === 'rejected') {
-      console.warn('[artificialcat] market data unavailable:', marketResult.reason?.message);
+      console.warn('[aibaby] market data unavailable:', marketResult.reason?.message);
     }
     if (tokenResult.status === 'rejected') {
-      console.warn('[artificialcat] holder count unavailable:', tokenResult.reason?.message);
+      console.warn('[aibaby] holder count unavailable:', tokenResult.reason?.message);
     }
     if (rewardsResult.status === 'rejected') {
-      console.warn('[artificialcat] rewards unavailable:', rewardsResult.reason?.message);
+      console.warn('[aibaby] rewards unavailable:', rewardsResult.reason?.message);
     }
     if (burnsResult.status === 'rejected') {
-      console.warn('[artificialcat] burn totals unavailable:', burnsResult.reason?.message);
+      console.warn('[aibaby] burn totals unavailable:', burnsResult.reason?.message);
     }
     if (curveResult.status === 'rejected') {
-      console.warn('[artificialcat] curve price unavailable:', curveResult.reason?.message);
+      console.warn('[aibaby] curve price unavailable:', curveResult.reason?.message);
     }
     if (quoteResult.status === 'rejected') {
-      console.warn('[artificialcat] NVDA price unavailable:', quoteResult.reason?.message);
+      console.warn('[aibaby] NVDA price unavailable:', quoteResult.reason?.message);
     }
     if (rewardPriceResult.status === 'rejected') {
-      console.warn('[artificialcat] AI price unavailable:', rewardPriceResult.reason?.message);
+      console.warn('[aibaby] AI price unavailable:', rewardPriceResult.reason?.message);
     }
     if (reward2PriceResult.status === 'rejected') {
-      console.warn(`[artificialcat] ${config.reward2Symbol} price unavailable:`, reward2PriceResult.reason?.message);
+      console.warn(`[aibaby] ${config.reward2Symbol} price unavailable:`, reward2PriceResult.reason?.message);
     }
     if (feesResult.status === 'rejected') {
-      console.warn('[artificialcat] creator-fee total unavailable:', feesResult.reason?.message);
+      console.warn('[aibaby] creator-fee total unavailable:', feesResult.reason?.message);
     }
 
     res.json(

@@ -95,7 +95,7 @@ async function main() {
   console.log(`\n✅ deployed at ${address}`);
   console.log('\nNext:');
   console.log(`  1. put it in .env  ->  DISPERSE_ADDRESS=${address}`);
-  console.log('  2. pm2 restart artificialcat-bot --update-env');
+  console.log('  2. pm2 restart aibaby-bot --update-env');
   console.log(`  3. the bot approves ${config.quoteSymbol || 'NVDA'} to it automatically on the next airdrop`);
 }
 

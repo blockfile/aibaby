@@ -1,15 +1,15 @@
-# artificialcat
+# aibaby
 
-**Creator-fee reward bot and stats API for [artificialcat.meme](https://artificialcat.meme).**
+**Creator-fee reward bot and stats API for [babyartificialinu.com](https://babyartificialinu.com).**
 
-ARTCAT launches on the Pons V2 launchpad **paired with NVDA** (tokenized
+BABYAI launches on the Pons V2 launchpad **paired with NVDA** (tokenized
 NVIDIA stock). Because pons pays creator fees in whatever a launch is priced in,
 those fees accrue **as NVDA** — never as ETH. This repo claims them, airdrops
-nearly all of them pro-rata to ARTCAT holders, keeps back only what it costs to
+nearly all of them pro-rata to BABYAI holders, keeps back only what it costs to
 send them, and reports what it did to the site.
 
 ```
-ARTCAT trades  →  creator fees accrue on-chain, denominated in NVDA
+BABYAI trades  →  creator fees accrue on-chain, denominated in NVDA
       ↓  sweep              push pending fees into the pons fee escrow
       ↓  claimToken(NVDA)   withdraw the escrow → the bot's wallet
       ├─ 10% → sell for native ETH, so the bot can pay its own gas
@@ -45,7 +45,7 @@ The public API must never hold a signing key, so the bot is a separate process:
 
 | Process | Runs | Holds the wallet key | Exposed |
 | --- | --- | --- | --- |
-| `server.js` (`npm start`) | the site's API | **no** | nginx → `api.artificialcat.meme` |
+| `server.js` (`npm start`) | the site's API | **no** | nginx → `api.babyartificialinu.com` |
 | `bot.js` (`npm run bot`) | scheduler + cycle | **yes** | `127.0.0.1` only |
 
 They share one MongoDB: the bot writes payouts, the API reads them. A compromise
@@ -248,7 +248,7 @@ DexScreener has nothing to say.
 
 | Field | Is |
 | --- | --- |
-| `totalBurned` | ARTCAT tokens destroyed — the headline number |
+| `totalBurned` | BABYAI tokens destroyed — the headline number |
 | `burnQuoteSpent` | what those buybacks **cost**, in NVDA |
 | `totalBurnedUsd` | what the destroyed tokens are **worth today** |
 | `burnedPctOfSupply` | share of the original mint that has been burned |
@@ -303,7 +303,7 @@ Everything is documented in `.env.example`. The ones worth knowing first:
 
 | Env | Default | Meaning |
 | --- | --- | --- |
-| `WALLET_PRIVATE_KEY` | — | must be ARTCAT's `creatorFeeRecipient`; `bot.js` only |
+| `WALLET_PRIVATE_KEY` | — | must be BABYAI's `creatorFeeRecipient`; `bot.js` only |
 | `TOKEN_ADDRESS` | — | blank until launch → every stat is null |
 | `QUOTE_TOKEN_ADDRESS` | NVDA | the quote asset **and** the reward asset — one address, both roles |
 | `CLAIM_EVERY_USD` | `100` | fire once the accrued NVDA is worth this |
@@ -313,12 +313,12 @@ Everything is documented in `.env.example`. The ones worth knowing first:
 | `REWARD2_SHARE_PCT` | `50` | how much of that share is paid as AI rather than NVDA |
 | `REWARD2_TOKEN_ADDRESS` | AI `0x2e8c…1e18` | the second reward asset |
 | `REWARD2_POOL_*` | the \$6.7M NVDA/AI v4 pool | where the AI is bought |
-| `BURN_PCT` | `0` | share used to buy ARTCAT and burn it — **off by default here** |
+| `BURN_PCT` | `0` | share used to buy BABYAI and burn it — **off by default here** |
 | `GAS_PCT` | `10` | share sold for ETH to fund the bot's own gas |
 | `GAS_CEILING_ETH` | `0` | stop converting above this ETH balance (0 = never) |
 | `SLIPPAGE_PCT` | `5` | tolerance on the buyback swap only |
 | `DEV_PAYOUT_ADDRESS` | — | cold address the dev cut is forwarded to; blank = it stays in the bot wallet |
-| `MIN_HOLD` | `10000` | minimum ARTCAT balance to qualify (the site advertises 10,000) |
+| `MIN_HOLD` | `10000` | minimum BABYAI balance to qualify (the site advertises 10,000) |
 | `REWARD_CAP_PCT` | `0` | per-wallet weight cap, % of supply (0 = pure pro-rata) |
 | `DISPERSE_ADDRESS` | — | batch-transfer contract; blank → one transfer per recipient |
 | `GAS_RESERVE_ETH` | `0.01` | below this the cycle refuses to start |
@@ -395,7 +395,7 @@ a tokenized equity.
 
 ## Going live
 
-1. Launch ARTCAT on pons v2 paired with NVDA, **connected as the dev wallet**.
+1. Launch BABYAI on pons v2 paired with NVDA, **connected as the dev wallet**.
    Leave "Creator wallet" blank so it defaults to that connected wallet, and
    leave the holder-fee-sharing toggle **off**. The confirm modal must read
    "Creator fees: Paid to the creator wallet" and show the dev wallet's address.
@@ -408,10 +408,10 @@ a tokenized equity.
 ## Deploying
 
 See [`DEPLOY.md`](DEPLOY.md) — Ubuntu 24.04, Node 22, MongoDB, two PM2
-processes, nginx and Certbot for `api.artificialcat.meme`.
+processes, nginx and Certbot for `api.babyartificialinu.com`.
 
 ## Design
 
 The spec is in
-[`docs/superpowers/specs/2026-08-30-artificialcat-rewards-bot-design.md`](docs/superpowers/specs/2026-08-30-artificialcat-rewards-bot-design.md)
+[`docs/superpowers/specs/2026-08-30-aibaby-rewards-bot-design.md`](docs/superpowers/specs/2026-08-30-aibaby-rewards-bot-design.md)
 and the implementation plan in [`docs/superpowers/plans/`](docs/superpowers/plans/).

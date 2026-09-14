@@ -5,32 +5,28 @@ const assert = require('node:assert');
 const { buildToken } = require('./token');
 
 test('ticker carries the "$" the site displays; symbol does not', () => {
-  const out = buildToken({ name: 'Artificial Cat', symbol: 'ARTCAT', tokenAddress: '0xabc' });
-  assert.strictEqual(out.ticker, '$ARTCAT');
-  assert.strictEqual(out.symbol, 'ARTCAT');
-  assert.strictEqual(out.name, 'Artificial Cat');
+  const out = buildToken({ name: 'Artificial Baby Inu', symbol: 'BABYAI', tokenAddress: '0xabc' });
+  assert.strictEqual(out.ticker, '$BABYAI');
+  assert.strictEqual(out.symbol, 'BABYAI');
+  assert.strictEqual(out.name, 'Artificial Baby Inu');
   assert.strictEqual(out.contractAddress, '0xabc');
   assert.strictEqual(out.chain, 'Robinhood Chain');
 });
 
 test('pre-launch the contract address is null, not an empty string', () => {
-  assert.strictEqual(buildToken({ name: 'Artificial Cat', symbol: 'ARTCAT', tokenAddress: null }).contractAddress, null);
+  assert.strictEqual(buildToken({ name: 'Artificial Baby Inu', symbol: 'BABYAI', tokenAddress: null }).contractAddress, null);
 });
 
-// The Artificial Cat site's Lore.jsx reads `token?.lore ?? []` — the ONLY
-// field it takes from /token. Without it the live site boots the Origin Log
-// terminal with nothing in it.
+// The Cat-template site's Lore.jsx reads `token?.lore ?? []` — the ONLY
+// field it takes from /token.
 
-test('serves the Origin Log paragraphs the site renders from `lore`', () => {
-  const out = buildToken({ name: 'Artificial Cat', symbol: 'ARTCAT', tokenAddress: null });
-  assert.ok(Array.isArray(out.lore), 'lore must be an array');
-  assert.strictEqual(out.lore.length, 3);
-  for (const p of out.lore) assert.ok(typeof p === 'string' && p.length > 40, 'each entry is a paragraph');
-  assert.match(out.lore.join(' '), /\$ARTCAT is that experiment/);
+test('lore keeps its shape, so a Cat-template site renders rather than crashes', () => {
+  const out = buildToken({ name: 'Artificial Baby Inu', symbol: 'BABYAI', tokenAddress: null });
+  assert.ok(Array.isArray(out.lore), 'lore must stay an array');
 });
 
-test('the lore names the ticker it is served with, so a rename cannot leave it stale', () => {
-  const out = buildToken({ name: 'Artificial Cat', symbol: 'XYZ', tokenAddress: null });
-  assert.match(out.lore.join(' '), /\$XYZ is that experiment/);
-  assert.doesNotMatch(out.lore.join(' '), /\$ARTCAT/);
+test('lore is empty until this project has its own story — never the cat one it was cloned with', () => {
+  // A wrong story renders as true; an empty one renders as an empty terminal.
+  const out = buildToken({ name: 'Artificial Baby Inu', symbol: 'BABYAI', tokenAddress: null });
+  assert.deepStrictEqual(out.lore, []);
 });

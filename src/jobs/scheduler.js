@@ -188,7 +188,7 @@ async function pollOnce(trigger, deps = {}) {
     try {
       priceUsd = (await readPrice()).priceUsd;
     } catch (err) {
-      console.warn(`[artificialcat] NVDA price unavailable: ${err.message}`);
+      console.warn(`[aibaby] NVDA price unavailable: ${err.message}`);
     }
     state.lastPriceUsd = priceUsd;
 

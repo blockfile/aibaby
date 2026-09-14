@@ -44,8 +44,8 @@ app.use(
 
 app.get('/', (req, res) => {
   res.json({
-    name: 'artificialcat-api',
-    description: 'ARTCAT market cap, holder count, total NVDA rewarded and the live rewards feed for the Artificial Cat site',
+    name: 'aibaby-api',
+    description: 'BABYAI market cap, holder count, and what holders were paid in NVDA, AI and BABYAI, for the Artificial Baby Inu site',
     token: { symbol: config.tokenSymbol, address: config.tokenAddress },
     endpoints: [
       'GET /token',
@@ -85,11 +85,11 @@ app.use((err, req, res, next) => {
     const origin = req.get('origin') || 'unknown';
     if (!loggedBlockedOrigins.has(origin)) {
       loggedBlockedOrigins.add(origin);
-      console.warn(`[artificialcat] blocking CORS origin: ${origin}`);
+      console.warn(`[aibaby] blocking CORS origin: ${origin}`);
     }
     return res.status(403).json({ error: 'origin not allowed' });
   }
-  console.error('[artificialcat] request error:', err);
+  console.error('[aibaby] request error:', err);
   // Logged in full, answered in general. `err.message` routinely carries the
   // MongoDB connection string's host, an RPC URL, or a filesystem path — none of
   // which a caller has any business learning from a failed request. The operator
@@ -109,20 +109,20 @@ let server;
 // means a compromise of this internet-facing service reaches no signing key.
 async function main() {
   await db.connect();
-  console.log(`[artificialcat] MongoDB connected (${config.mongoDb})`);
+  console.log(`[aibaby] MongoDB connected (${config.mongoDb})`);
 
   server = app.listen(config.port, () => {
-    console.log(`[artificialcat] listening on http://localhost:${config.port}`);
+    console.log(`[aibaby] listening on http://localhost:${config.port}`);
     console.log(
-      `[artificialcat] token=${config.tokenSymbol} address=${config.tokenAddress || '(not set — stats will be null)'}`
+      `[aibaby] token=${config.tokenSymbol} address=${config.tokenAddress || '(not set — stats will be null)'}`
     );
-    console.log(`[artificialcat] cors=${config.corsOrigins.join(', ')}`);
+    console.log(`[aibaby] cors=${config.corsOrigins.join(', ')}`);
   });
 }
 
 if (require.main === module) {
   const shutdown = async (signal) => {
-    console.log(`\n[artificialcat] ${signal} received, shutting down`);
+    console.log(`\n[aibaby] ${signal} received, shutting down`);
     if (server) server.close();
     await db.close();
     process.exit(0);
@@ -131,7 +131,7 @@ if (require.main === module) {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
 
   main().catch((err) => {
-    console.error('[artificialcat] failed to start:', err);
+    console.error('[aibaby] failed to start:', err);
     process.exit(1);
   });
 }

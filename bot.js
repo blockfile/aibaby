@@ -27,7 +27,7 @@ app.use((req, res) => res.status(404).json({ error: 'not found' }));
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error('[artificialcat-bot] request error:', err);
+  console.error('[aibaby-bot] request error:', err);
   res.status(500).json({ error: err.message });
 });
 
@@ -35,34 +35,34 @@ let server;
 
 async function main() {
   await db.connect();
-  console.log(`[artificialcat-bot] MongoDB connected (${config.mongoDb})`);
+  console.log(`[aibaby-bot] MongoDB connected (${config.mongoDb})`);
 
   // Five impostor NVDA tokens exist on this chain, some sharing the real one's
   // name and symbol. Verify the bytecode BEFORE the scheduler can start, so a
   // wrong address stops the bot rather than quietly spending on the wrong asset.
   if (!config.dryRun) {
     const { codeHash } = await assertQuoteToken();
-    console.log(`[artificialcat-bot] quote asset ${config.quoteSymbol} verified (code ${codeHash.slice(0, 10)}…)`);
+    console.log(`[aibaby-bot] quote asset ${config.quoteSymbol} verified (code ${codeHash.slice(0, 10)}…)`);
   }
 
   server = app.listen(config.botPort, '127.0.0.1', () => {
-    console.log(`[artificialcat-bot] operator API on http://127.0.0.1:${config.botPort} (localhost only)`);
-    console.log(`[artificialcat-bot] dryRun=${config.dryRun} wallet=${walletAddress()}`);
+    console.log(`[aibaby-bot] operator API on http://127.0.0.1:${config.botPort} (localhost only)`);
+    console.log(`[aibaby-bot] dryRun=${config.dryRun} wallet=${walletAddress()}`);
     console.log(
-      `[artificialcat-bot] token=${config.tokenSymbol} ${config.tokenAddress || '(TOKEN_ADDRESS not set — cycles will fail)'}`
+      `[aibaby-bot] token=${config.tokenSymbol} ${config.tokenAddress || '(TOKEN_ADDRESS not set — cycles will fail)'}`
     );
     if (config.walletIsEphemeral) {
-      console.log('[artificialcat-bot] WARNING: ephemeral wallet (no WALLET_PRIVATE_KEY) — dry run only');
+      console.log('[aibaby-bot] WARNING: ephemeral wallet (no WALLET_PRIVATE_KEY) — dry run only');
     }
     if (!config.apiKey) {
-      console.warn('[artificialcat-bot] WARNING: API_KEY is unset — the operator endpoints are unauthenticated');
+      console.warn('[aibaby-bot] WARNING: API_KEY is unset — the operator endpoints are unauthenticated');
     }
     scheduler.start();
   });
 }
 
 async function shutdown(signal) {
-  console.log(`\n[artificialcat-bot] ${signal} received, shutting down`);
+  console.log(`\n[aibaby-bot] ${signal} received, shutting down`);
   if (server) server.close();
   await db.close();
   process.exit(0);
@@ -71,7 +71,7 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 main().catch((err) => {
-  console.error('[artificialcat-bot] failed to start:', err);
+  console.error('[aibaby-bot] failed to start:', err);
   process.exit(1);
 });
 

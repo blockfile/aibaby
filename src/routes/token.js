@@ -2,7 +2,7 @@
 
 // GET /token — token identity, fetched once on load.
 //
-// The Artificial Cat site's App.jsx reads only `lore` from this (the Origin Log
+// The Cat-template site's App.jsx reads only `lore` from this (the Origin Log
 // paragraphs, see src/lore.js); its ticker, supply and contract address are
 // hardcoded in its src/site.js. The identity fields are still served so a
 // frontend built from the other templates in this lineage — which do read

@@ -133,12 +133,12 @@ test('the log chunk fits the strictest RPC we have met, not the most generous', 
   assert.ok(config.holderIndexChunk >= 1_000, 'but not so small the backfill takes forever');
 });
 
-test('the defaults match what the Artificial Cat site tells visitors', () => {
-  // The site's src/site.js: ticker 'ARTCAT', minimumHold 10_000, and its
-  // Distribution section promises that 10,000 $ARTCAT makes a wallet eligible.
+test('the defaults match what the Cat-template site tells visitors', () => {
+  // The site's src/site.js: ticker 'BABYAI', minimumHold 10_000, and its
+  // Distribution section promises that 10,000 $BABYAI makes a wallet eligible.
   // A stricter bot would silently skip wallets the page told they qualify.
   const config = loadConfig({ DRY_RUN: 'true' });
-  assert.strictEqual(config.tokenSymbol, 'ARTCAT');
+  assert.strictEqual(config.tokenSymbol, 'BABYAI');
   assert.strictEqual(config.minHold, 10_000);
 });
 

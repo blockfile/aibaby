@@ -72,7 +72,7 @@ test('an empty feed presents empty lists under every name', () => {
 });
 
 test('the payout list is served under `data`, and the meter alongside it', () => {
-  // The Artificial Cat site reads `json.data ?? json.rewards ?? json` and
+  // The Neko-template site reads `json.data ?? json.rewards ?? json` and
   // THROWS on anything that is not an array, so a healthy API missing `data`
   // renders as "Unexpected rewards payload shape". Its meter comes from the
   // same response rather than a second poll.

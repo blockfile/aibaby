@@ -1,6 +1,6 @@
 'use strict';
 
-// Market cap for ARTCAT, from DexScreener's public API (no key required).
+// Market cap for BABYAI, from DexScreener's public API (no key required).
 //
 // Returns nulls rather than throwing when the token isn't listed yet or the API
 // is unreachable, so /stats never breaks — the site hides a tile whose value is
@@ -52,7 +52,7 @@ function parsePairs(data, token, chainId) {
   // BILLION against a true ~$676K. Anyone can open a pool with any ratio, and a
   // deep one is not thereby the market.
   //
-  // The launch settles it: pons priced ARTCAT in NVDA, so the ARTCAT/NVDA pool IS
+  // The launch settles it: pons priced BABYAI in NVDA, so the BABYAI/NVDA pool IS
   // where it trades and every other pair is a side venue. Preference, not a
   // filter — before that pair is indexed a deep pool is still better than
   // nothing, and the liquidity floor applies either way.

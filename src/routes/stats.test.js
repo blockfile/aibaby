@@ -10,7 +10,7 @@ const { buildStats, supplyFallback, withSupplyFallback } = require('./stats');
 const build = (market, token, rewards = {}, curve = {}, rewardPrice = {}, supply = null) =>
   buildStats({
     market, token, rewards, curve, rewardPrice,
-    quote: rewardPrice, symbol: 'ARTCAT', tokenAddress: '0xabc', supply,
+    quote: rewardPrice, symbol: 'BABYAI', tokenAddress: '0xabc', supply,
   });
 
 // Blockscout-shaped supply: 1B tokens at 18 decimals.
@@ -158,7 +158,7 @@ test('exposes the burned total the site renders', () => {
     market: { priceUsd: 0.00002 },
     token: {},
     burns: { totalBurned: 12345.6, burnQuoteSpent: 2.5, burns: 3 },
-    symbol: 'ARTCAT',
+    symbol: 'BABYAI',
   });
   assert.strictEqual(out.totalBurned, 12345.6);
   assert.strictEqual(out.burns, 3);
@@ -172,14 +172,14 @@ test('what the burns COST is kept separate from what they are worth now', () => 
     market: { priceUsd: 2 },
     token: {},
     burns: { totalBurned: 100, burnQuoteSpent: 1.5, burns: 1 },
-    symbol: 'ARTCAT',
+    symbol: 'BABYAI',
   });
   assert.strictEqual(out.burnQuoteSpent, 1.5, 'cost, in NVDA');
   assert.strictEqual(out.totalBurnedUsd, 200, 'current value, in USD');
 });
 
 test('burn figures are null (never 0) when nothing has been burned yet', () => {
-  const out = buildStats({ market: {}, token: {}, symbol: 'ARTCAT' });
+  const out = buildStats({ market: {}, token: {}, symbol: 'BABYAI' });
   assert.strictEqual(out.totalBurned, null);
   assert.strictEqual(out.totalBurnedUsd, null);
   assert.strictEqual(out.burnedPctOfSupply, null);
@@ -190,7 +190,7 @@ test('a real zero burn total is preserved, not treated as missing', () => {
     market: { priceUsd: 2 },
     token: {},
     burns: { totalBurned: 0, burnQuoteSpent: 0, burns: 0 },
-    symbol: 'ARTCAT',
+    symbol: 'BABYAI',
   });
   assert.strictEqual(out.totalBurned, 0);
   assert.strictEqual(out.totalBurnedUsd, 0);
@@ -203,7 +203,7 @@ test('burned share of supply adds back what was destroyed', () => {
     market: {},
     token: { totalSupply: (900n * 10n ** 18n).toString(), decimals: 18 },
     burns: { totalBurned: 100, burnQuoteSpent: 1, burns: 1 },
-    symbol: 'ARTCAT',
+    symbol: 'BABYAI',
   });
   assert.ok(Math.abs(out.burnedPctOfSupply - 10) < 1e-9);
 });
@@ -213,7 +213,7 @@ test('burned share needs the supply — without it, null rather than a wrong num
     market: {},
     token: {},
     burns: { totalBurned: 100, burnQuoteSpent: 1, burns: 1 },
-    symbol: 'ARTCAT',
+    symbol: 'BABYAI',
   });
   assert.strictEqual(out.burnedPctOfSupply, null);
 });
@@ -228,7 +228,7 @@ test('the reward total is served as TOKENS and its USD value separately', () => 
     token: {},
     rewards: { totalRewarded: 12.5 },
     rewardPrice: { priceUsd: 180 },
-    symbol: 'ARTCAT',
+    symbol: 'BABYAI',
     tokenAddress: '0xtoken',
   });
   assert.strictEqual(out.rewardDistributed, 12.5, 'the NVDA amount, for the $NVDA label');
@@ -239,10 +239,10 @@ test('the reward total is served as TOKENS and its USD value separately', () => 
 const { parsePairs } = require('../services/marketdata');
 
 const NVDA = '0xd0601ce157db5bdc3162bbac2a2c8af5320d9eec';
-const ARTCAT = '0xc6e8c393d46b685c2fb2177f759f2b16eb7a7d54';
+const BABYAI = '0xc6e8c393d46b685c2fb2177f759f2b16eb7a7d54';
 const pair = (quote, price, mcap, liq) => ({
   chainId: 'robinhood',
-  baseToken: { address: ARTCAT },
+  baseToken: { address: BABYAI },
   quoteToken: { address: quote },
   priceUsd: String(price),
   marketCap: mcap,
@@ -256,7 +256,7 @@ test('the launch pair prices the token, however deep another pool is', () => {
   // paired with NVDA; that pool is the market, and depth alone cannot say so.
   const out = parsePairs(
     { pairs: [pair('0x0000000000000000000000000000000000000000', 3.22, 3_229_256_427, 35_825_285), pair(NVDA, 0.0006732, 676_040, 71_729)] },
-    ARTCAT,
+    BABYAI,
     'robinhood'
   );
   assert.strictEqual(out.marketCap, 676_040, 'the NVDA pair wins on identity, not depth');
@@ -265,7 +265,7 @@ test('the launch pair prices the token, however deep another pool is', () => {
 
 test('the liquidity floor still applies within the launch pair', () => {
   // A dust NVDA pool is no more trustworthy than a dust ETH one.
-  const out = parsePairs({ pairs: [pair(NVDA, 0.5, 500_000_000, 3.32)] }, ARTCAT, 'robinhood');
+  const out = parsePairs({ pairs: [pair(NVDA, 0.5, 500_000_000, 3.32)] }, BABYAI, 'robinhood');
   assert.strictEqual(out.marketCap, null, 'below MIN_PAIR_LIQUIDITY_USD is no answer at all');
 });
 
@@ -274,7 +274,7 @@ test('with no launch pair listed, the deepest real pool is still used', () => {
   // deep pool is better than nothing — this is only a preference, not a filter.
   const out = parsePairs(
     { pairs: [pair('0x0000000000000000000000000000000000000000', 0.0006776, 677_601, 4_920)] },
-    ARTCAT,
+    BABYAI,
     'robinhood'
   );
   assert.strictEqual(out.marketCap, 677_601);
@@ -295,7 +295,7 @@ test('fees EARNED is served alongside what was DISTRIBUTED, never instead of it'
     creatorFees: { feesEarned: 246.642441851, sweeps: 187 },
     quote: { priceUsd: 231.6 },
     rewardPrice: { priceUsd: 231.6 },
-    symbol: 'ARTCAT',
+    symbol: 'BABYAI',
     tokenAddress: '0xtoken',
   });
   assert.ok(Math.abs(out.feesEarned - 246.642441851) < 1e-6, `got ${out.feesEarned}`);
@@ -308,20 +308,20 @@ test('fees earned with no price gives a null USD, not a zero', () => {
   const out = buildStats({
     market: {}, token: {}, rewards: {},
     creatorFees: { feesEarned: 246.64, sweeps: 187 },
-    quote: {}, symbol: 'ARTCAT', tokenAddress: '0xtoken',
+    quote: {}, symbol: 'BABYAI', tokenAddress: '0xtoken',
   });
   assert.strictEqual(out.feesEarned, 246.64);
   assert.strictEqual(out.feesEarnedUsd, null);
 });
 
 test('no creator-fee data at all leaves the tile hidden rather than zeroed', () => {
-  const out = buildStats({ market: {}, token: {}, rewards: {}, symbol: 'ARTCAT', tokenAddress: '0xtoken' });
+  const out = buildStats({ market: {}, token: {}, rewards: {}, symbol: 'BABYAI', tokenAddress: '0xtoken' });
   assert.strictEqual(out.feesEarned, null);
   assert.strictEqual(out.sweeps, null);
   assert.strictEqual(out.feesEarnedUsd, null);
 });
 
-// ── The Artificial Cat site (BullTismClone3) ─────────────────────────────────
+// ── The Cat-template site (BullTismClone3) ─────────────────────────────────
 //
 // Its src/api/stats.js reads exactly four fields, and CatStats.jsx renders
 // anything that is not a number as "—": marketCapUsd, nvdaDistributed (a
@@ -329,7 +329,7 @@ test('no creator-fee data at all leaves the tile hidden rather than zeroed', () 
 // routed to holders" footnote) and totalHolders. Only the last existed under
 // that name, so against the live API three of the four tiles were dashes.
 
-test('serves the four fields the Artificial Cat site reads, under its names', () => {
+test('serves the four fields the Cat-template site reads, under its names', () => {
   const out = build({ marketCap: 4_812_400 }, { holders: 18_742 }, { totalRewarded: 1284.62 }, {}, { priceUsd: 170 });
   assert.strictEqual(out.marketCapUsd, 4_812_400);
   assert.strictEqual(out.nvdaDistributed, 1284.62); // tokens, not dollars
@@ -368,7 +368,7 @@ const twoAssets = (rewards, p1, p2) =>
   buildStats({
     market: {}, token: {}, rewards, curve: {}, quote: {},
     rewardPrice: p1, reward2Price: p2,
-    symbol: 'ARTCAT', tokenAddress: '0xabc',
+    symbol: 'BABYAI', tokenAddress: '0xabc',
     rewardSymbol: 'NVDA', rewardTokenAddress: '0xnvda',
     reward2Symbol: 'AI', reward2TokenAddress: '0xai',
   });
