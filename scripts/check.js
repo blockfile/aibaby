@@ -252,7 +252,7 @@ async function main() {
   // BOTH schedules. Printing only the poll said the trigger fired every minute
   // when it fires hourly — the one number an operator reads this line for.
   console.log(
-    `  trigger    : ${config.triggerMode}${config.triggerMode === 'accumulation' ? ` at $${config.claimEveryUsd}` : ''} on "${config.triggerSchedule}"` +
+    `  trigger    : ${config.triggerMode}${config.triggerMode === 'accumulation' ? ` at ${config.claimEveryUsd}` : config.triggerMode === 'token' ? ` at ${config.claimEveryTokens} ${config.quoteSymbol || 'NVDA'} (no price needed)` : ''} on "${config.triggerSchedule}"` +
       `${nextCheckIn() === null ? '' : ` (next in ${nextCheckIn()})`}`
   );
   console.log(`  gauge poll : "${config.pollSchedule}" — reads the chain and writes the fee gauge, never pays`);
