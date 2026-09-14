@@ -7,7 +7,7 @@ const { parseCurvePrice, combinePrices, EMPTY } = require('./curvemarket');
 // Shape returned by GET {ponsApi}/api/pons-v2-market/{token}/chart?range=1d
 const chart = (points) => ({ token: '0xd16e', range: '1d', intervalSeconds: 300, points });
 
-test('returns the latest point\'s price (NVDA per BABYAI)', () => {
+test('returns the latest point\'s price (NVDA per BABYINU)', () => {
   const data = chart([
     { t: 1, price: 3.1e-8, tradeCount: 3 },
     { t: 2, price: 1.25e-7, tradeCount: 5 },

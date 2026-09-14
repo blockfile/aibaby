@@ -274,7 +274,7 @@ function withSplit(env, fn) {
   }
 }
 
-test('a claim splits four ways and re-adds exactly: 30 NVDA / 30 AI / 30 BABYAI / 10 gas', () => {
+test('a claim splits four ways and re-adds exactly: 30 NVDA / 30 AI / 30 BABYINU / 10 gas', () => {
   withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim, rewardLegPlan }, config) => {
     const s = splitClaim(100);
     assert.deepStrictEqual(s, { rewardQuote: 60, ownTokenQuote: 30, burnQuote: 0, gasQuote: 10, devQuote: 0 });

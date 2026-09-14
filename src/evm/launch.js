@@ -19,7 +19,7 @@ function curveAt(address) {
 }
 
 async function getLaunch(token = config.tokenAddress) {
-  if (!token) throw new Error('TOKEN_ADDRESS (BABYAI) is required');
+  if (!token) throw new Error('TOKEN_ADDRESS (BABYINU) is required');
 
   if (config.dryRun) {
     return {

@@ -23,8 +23,8 @@ function loadConfig(env = {}) {
 }
 
 test('the default 60/30/0/10 split pays holders three assets and leaves no dev cut', () => {
-  // 60 to NVDA+AI (30/30 at REWARD2_SHARE_PCT=50), 30 buys BABYAI back for
-  // holders, 10 funds gas. BURN_PCT is 0 BY CHOICE: buying BABYAI back to
+  // 60 to NVDA+AI (30/30 at REWARD2_SHARE_PCT=50), 30 buys BABYINU back for
+  // holders, 10 funds gas. BURN_PCT is 0 BY CHOICE: buying BABYINU back to
   // DISTRIBUTE is OWN_TOKEN_PCT; burning it is a separate decision, not funded.
   const config = loadConfig({ DRY_RUN: 'true' });
   assert.strictEqual(config.rewardPct, 60);
@@ -135,11 +135,11 @@ test('the log chunk fits the strictest RPC we have met, not the most generous', 
 });
 
 test('the defaults match what the Cat-template site tells visitors', () => {
-  // The site's src/site.js: ticker 'BABYAI', minimumHold 10_000, and its
-  // Distribution section promises that 10,000 $BABYAI makes a wallet eligible.
+  // The site's src/site.js: ticker 'BABYINU', minimumHold 10_000, and its
+  // Distribution section promises that 10,000 $BABYINU makes a wallet eligible.
   // A stricter bot would silently skip wallets the page told they qualify.
   const config = loadConfig({ DRY_RUN: 'true' });
-  assert.strictEqual(config.tokenSymbol, 'BABYAI');
+  assert.strictEqual(config.tokenSymbol, 'BABYINU');
   assert.strictEqual(config.minHold, 10_000);
 });
 
@@ -176,7 +176,7 @@ test('the second leg can be switched off entirely', () => {
   );
 });
 
-// ── OWN_TOKEN_PCT: buy BABYAI back and hand it to holders ────────────────────
+// ── OWN_TOKEN_PCT: buy BABYINU back and hand it to holders ────────────────────
 
 test('OWN_TOKEN_PCT is its own leg of the claim, counted in the 100', () => {
   const config = loadConfig({ REWARD_PCT: '50', OWN_TOKEN_PCT: '40', BURN_PCT: '0', GAS_PCT: '10', DRY_RUN: 'true' });
@@ -197,7 +197,7 @@ test('an out-of-range OWN_TOKEN_PCT is rejected outright', () => {
 });
 
 test('OWN_TOKEN_PCT and BURN_PCT are independent — one does not fund the other', () => {
-  // Both buy BABYAI; one hands it to holders, the other destroys it.
+  // Both buy BABYINU; one hands it to holders, the other destroys it.
   const config = loadConfig({ REWARD_PCT: '50', OWN_TOKEN_PCT: '20', BURN_PCT: '20', GAS_PCT: '10', DRY_RUN: 'true' });
   assert.strictEqual(config.ownTokenPct, 20);
   assert.strictEqual(config.burnPct, 20);

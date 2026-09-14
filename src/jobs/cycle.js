@@ -5,8 +5,8 @@
 //   sweep pending fees into the escrow   (best-effort — may need pons's operator)
 //   claimToken(NVDA)                     -> NVDA in the wallet
 //     -> GAS_PCT:    sell for native ETH, so the bot can pay its own gas
-//     -> REWARD_PCT: airdrop pro-rata to BABYAI holders
-//     -> BURN_PCT:   buy BABYAI with it and burn what was bought. ZERO by
+//     -> REWARD_PCT: airdrop pro-rata to BABYINU holders
+//     -> BURN_PCT:   buy BABYINU with it and burn what was bought. ZERO by
 //                    default here — the leg is built and tested but this
 //                    deployment does not fund it, so it skips every cycle.
 //     -> remainder:  the dev cut — forwarded to DEV_PAYOUT_ADDRESS if one is
@@ -196,7 +196,7 @@ function rewardLegPlan(rewardQuote, sharePct = config.reward2SharePct, ownTokenQ
   if (sharePct > 0 && config.reward2TokenAddress) {
     plan.push({ reward: rewardLegTwo(), quoteAmount: second });
   }
-  // Leg three: BABYAI, bought back with its OWN share of the claim. Planned last,
+  // Leg three: BABYINU, bought back with its OWN share of the claim. Planned last,
   // after the two reward assets, so a slow or failing buy on the launch venue can
   // never delay NVDA or AI reaching holders.
   if (ownTokenQuote > 0) {
@@ -353,7 +353,7 @@ async function runCycle() {
   const log = (msg) => console.log(`[cycle ${id}] ${msg}`);
 
   try {
-    if (!config.tokenAddress) throw new Error('TOKEN_ADDRESS (BABYAI) is required');
+    if (!config.tokenAddress) throw new Error('TOKEN_ADDRESS (BABYINU) is required');
 
     const launch = await getLaunch();
     const phase = describePhase(launch);
@@ -451,7 +451,7 @@ async function runCycle() {
       log(`reward leg skipped: ${reason}`);
     }
 
-    // 5. Buy BABYAI with the burn share and destroy it. Non-fatal: the
+    // 5. Buy BABYINU with the burn share and destroy it. Non-fatal: the
     //    holders have already been paid, so a failed swap leaves the NVDA in
     //    the wallet to retry next cycle rather than losing the whole cycle.
     const buyback = await buybackAndBurn({ launch, quoteAmount: burnQuote });

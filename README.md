@@ -2,21 +2,21 @@
 
 **Creator-fee reward bot and stats API for [babyartificialinu.com](https://babyartificialinu.com).**
 
-BABYAI launches on the Pons V2 launchpad **paired with NVDA** (tokenized
+BABYINU launches on the Pons V2 launchpad **paired with NVDA** (tokenized
 NVIDIA stock). Because pons pays creator fees in whatever a launch is priced in,
 those fees accrue **as NVDA** — never as ETH. This repo claims them, airdrops
-nearly all of them pro-rata to BABYAI holders, keeps back only what it costs to
+nearly all of them pro-rata to BABYINU holders, keeps back only what it costs to
 send them, and reports what it did to the site.
 
 ```
-BABYAI trades  →  creator fees accrue on-chain, denominated in NVDA
+BABYINU trades  →  creator fees accrue on-chain, denominated in NVDA
       ↓  sweep              push pending fees into the pons fee escrow
       ↓  claimToken(NVDA)   withdraw the escrow → the bot's wallet
       ├─ 10% → sell for native ETH, so the bot can pay its own gas
       ├─ 60% → to holders as NVDA and AI (REWARD_PCT, split by REWARD2_SHARE_PCT=50):
       │        ├─ 30% airdropped as NVDA — no swap, fees already arrive in it
       │        └─ 30% buys AI in the NVDA/AI v4 pool, and that AI is airdropped
-      ├─ 30% → buys BABYAI back on its own venue, and airdrops it (OWN_TOKEN_PCT)
+      ├─ 30% → buys BABYINU back on its own venue, and airdrops it (OWN_TOKEN_PCT)
       ├─  0% → buyback + burn: BUILT, but not funded (BURN_PCT=0)
       └─  0% → dev cut: whatever the others leave (none at 60/30/0/10)
 ```
@@ -249,7 +249,7 @@ DexScreener has nothing to say.
 
 | Field | Is |
 | --- | --- |
-| `totalBurned` | BABYAI tokens destroyed — the headline number |
+| `totalBurned` | BABYINU tokens destroyed — the headline number |
 | `burnQuoteSpent` | what those buybacks **cost**, in NVDA |
 | `totalBurnedUsd` | what the destroyed tokens are **worth today** |
 | `burnedPctOfSupply` | share of the original mint that has been burned |
@@ -304,7 +304,7 @@ Everything is documented in `.env.example`. The ones worth knowing first:
 
 | Env | Default | Meaning |
 | --- | --- | --- |
-| `WALLET_PRIVATE_KEY` | — | must be BABYAI's `creatorFeeRecipient`; `bot.js` only |
+| `WALLET_PRIVATE_KEY` | — | must be BABYINU's `creatorFeeRecipient`; `bot.js` only |
 | `TOKEN_ADDRESS` | — | blank until launch → every stat is null |
 | `QUOTE_TOKEN_ADDRESS` | NVDA | the quote asset **and** the reward asset — one address, both roles |
 | `CLAIM_EVERY_USD` | `100` | fire once the accrued NVDA is worth this |
@@ -314,12 +314,12 @@ Everything is documented in `.env.example`. The ones worth knowing first:
 | `REWARD2_SHARE_PCT` | `50` | how much of that share is paid as AI rather than NVDA |
 | `REWARD2_TOKEN_ADDRESS` | AI `0x2e8c…1e18` | the second reward asset |
 | `REWARD2_POOL_*` | the \$6.7M NVDA/AI v4 pool | where the AI is bought |
-| `BURN_PCT` | `0` | share used to buy BABYAI and burn it — **off by default here** |
+| `BURN_PCT` | `0` | share used to buy BABYINU and burn it — **off by default here** |
 | `GAS_PCT` | `10` | share sold for ETH to fund the bot's own gas |
 | `GAS_CEILING_ETH` | `0` | stop converting above this ETH balance (0 = never) |
 | `SLIPPAGE_PCT` | `5` | tolerance on the buyback swap only |
 | `DEV_PAYOUT_ADDRESS` | — | cold address the dev cut is forwarded to; blank = it stays in the bot wallet |
-| `MIN_HOLD` | `10000` | minimum BABYAI balance to qualify (the site advertises 10,000) |
+| `MIN_HOLD` | `10000` | minimum BABYINU balance to qualify (the site advertises 10,000) |
 | `REWARD_CAP_PCT` | `0` | per-wallet weight cap, % of supply (0 = pure pro-rata) |
 | `DISPERSE_ADDRESS` | — | batch-transfer contract; blank → one transfer per recipient |
 | `GAS_RESERVE_ETH` | `0.01` | below this the cycle refuses to start |
@@ -396,7 +396,7 @@ a tokenized equity.
 
 ## Going live
 
-1. Launch BABYAI on pons v2 paired with NVDA, **connected as the dev wallet**.
+1. Launch BABYINU on pons v2 paired with NVDA, **connected as the dev wallet**.
    Leave "Creator wallet" blank so it defaults to that connected wallet, and
    leave the holder-fee-sharing toggle **off**. The confirm modal must read
    "Creator fees: Paid to the creator wallet" and show the dev wallet's address.

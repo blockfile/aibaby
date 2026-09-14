@@ -14,7 +14,7 @@ process.env.REWARD_PCT = '65';
 process.env.BURN_PCT = '25';
 process.env.GAS_PCT = '10';
 process.env.TOKEN_ADDRESS = '0x50d0d0da00ffd195d2d1d2448617ad039855ad2b';
-process.env.TOKEN_SYMBOL = 'BABYAI';
+process.env.TOKEN_SYMBOL = 'BABYINU';
 process.env.TOKEN_DECIMALS = '18';
 process.env.MIN_HOLD = '100000';
 process.env.WALLET_PRIVATE_KEY = '';
@@ -107,7 +107,7 @@ test('a funded vault claims, splits and airdrops to holders', async () => {
   );
 });
 
-test('the buyback buys BABYAI with the burn share and destroys it', async () => {
+test('the buyback buys BABYINU with the burn share and destroys it', async () => {
   simvault.reset(10);
   const cycle = await runCycle();
 
@@ -135,7 +135,7 @@ test('the buyback is NOT a holder payout and never reaches the rewards feed', as
   assert.ok(paidIn(config.reward2TokenAddress) > 0, 'and the other half as AI');
   assert.ok(
     !air.some((r) => r.reward_token.toLowerCase() === config.tokenAddress.toLowerCase()),
-    'the BABYAI bought for the burn is never recorded as a holder payout'
+    'the BABYINU bought for the burn is never recorded as a holder payout'
   );
 });
 
@@ -284,7 +284,7 @@ test('recorded payouts sum EXACTLY to the amount distributed — no dust', async
   );
 });
 
-test('a three-asset cycle pays NVDA, AI AND bought-back BABYAI, each to the last unit', async () => {
+test('a three-asset cycle pays NVDA, AI AND bought-back BABYINU, each to the last unit', async () => {
   process.env.REWARD_PCT = '60';
   process.env.OWN_TOKEN_PCT = '30';
   process.env.BURN_PCT = '0';
@@ -300,9 +300,9 @@ test('a three-asset cycle pays NVDA, AI AND bought-back BABYAI, each to the last
     assert.strictEqual(cycle.status, 'complete', cycle.error || '');
     assert.strictEqual(cycle.quote_claimed, 10);
     assert.strictEqual(cycle.quote_distributed, 9, '90% of the claim reached holders, across three assets');
-    assert.strictEqual(cycle.quote_own_token, 3, '30% of it bought BABYAI for them');
+    assert.strictEqual(cycle.quote_own_token, 3, '30% of it bought BABYINU for them');
     assert.strictEqual(cycle.quote_gas, 1);
-    assert.strictEqual(cycle.quote_burned, 0, 'buying BABYAI to DISTRIBUTE is not a burn');
+    assert.strictEqual(cycle.quote_burned, 0, 'buying BABYINU to DISTRIBUTE is not a burn');
 
     const swaps = cycle.steps.filter((s) => s.name === 'reward-swap');
     assert.deepStrictEqual(swaps.map((s) => s.detail.symbol), ['NVDA', 'AI', cfg.tokenSymbol]);
@@ -312,14 +312,14 @@ test('a three-asset cycle pays NVDA, AI AND bought-back BABYAI, each to the last
     const rawIn = (token) =>
       air.filter((r) => r.reward_token.toLowerCase() === String(token).toLowerCase()).reduce((n, r) => n + BigInt(r.amount_raw), 0n);
 
-    // The BABYAI leg hands out exactly what the buy returned — never the wallet's
+    // The BABYINU leg hands out exactly what the buy returned — never the wallet's
     // whole balance, which on a live launch includes the creator's own tokens.
     const ownSwap = swaps.find((s) => s.detail.symbol === cfg.tokenSymbol);
     assert.ok(ownSwap.detail.tokensBought > 0);
     assert.strictEqual(
       rawIn(cfg.tokenAddress),
       parseUnits(toUnitString(ownSwap.detail.tokensBought, cfg.tokenDecimals), cfg.tokenDecimals),
-      'every BABYAI bought reaches a holder, and nothing more'
+      'every BABYINU bought reaches a holder, and nothing more'
     );
     assert.ok(rawIn(cfg.rewardTokenAddress) > 0n, 'NVDA was paid');
     assert.ok(rawIn(cfg.reward2TokenAddress) > 0n, 'AI was paid');

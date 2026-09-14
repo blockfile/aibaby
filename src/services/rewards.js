@@ -31,7 +31,7 @@ async function fetchRewards() {
   const [leg1, leg2, own] = await Promise.all([
     repo.getDistributedTotal(config.rewardTokenAddress),
     config.reward2TokenAddress ? repo.getDistributedTotal(config.reward2TokenAddress) : null,
-    // BABYAI bought back and airdropped. Summed from the airdrop ledger, which is
+    // BABYINU bought back and airdropped. Summed from the airdrop ledger, which is
     // the right source: the burn ledger is a different set of steps entirely, so a
     // buyback-to-DISTRIBUTE can never inflate totalBurned, nor a burn this.
     config.ownTokenPct > 0 ? repo.getDistributedTotal(config.tokenAddress) : null,
@@ -42,7 +42,7 @@ async function fetchRewards() {
     // a null tile but renders a 0 as "nothing has been paid", which is a claim.
     totalRewarded2: leg2 ? leg2.totalUi ?? 0 : null,
     // Null when OWN_TOKEN_PCT is 0, so a page hides the tile rather than showing
-    // "0 BABYAI paid" for a leg that is switched off.
+    // "0 BABYINU paid" for a leg that is switched off.
     totalRewardedOwn: own ? own.totalUi ?? 0 : null,
   };
 }

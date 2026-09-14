@@ -2,7 +2,7 @@
   "name": "aibaby-api",
   "version": "1.0.0",
   "private": true,
-  "description": "Rewards bot and stats API for Artificial Baby Inu — claims BABYAI's NVDA creator fees, airdrops them to holders, and serves market cap, holders, total NVDA rewarded and the payout feed.",
+  "description": "Rewards bot and stats API for Baby Artificial Inu — claims BABYINU's NVDA creator fees, airdrops them to holders, and serves market cap, holders, total NVDA rewarded and the payout feed.",
   "homepage": "https://babyartificialinu.com",
   "type": "commonjs",
   "main": "server.js",

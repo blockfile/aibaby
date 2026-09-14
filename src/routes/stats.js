@@ -27,7 +27,7 @@ const { getCreatorFees } = require('../services/creatorfees');
 const router = express.Router();
 
 /**
- * Pure: what the burned BABYAI is worth at the CURRENT price.
+ * Pure: what the burned BABYINU is worth at the CURRENT price.
  *
  * Deliberately distinct from `burnQuoteSpent`, which is what the buybacks
  * actually cost in NVDA. The two answer different questions and drift apart as
@@ -138,7 +138,7 @@ function buildStats({
   // overstate it by three orders of magnitude.
   const totalRewarded2 = rewards.totalRewarded2 ?? null;
   const totalRewarded2Usd = rewardedUsd({ totalRewarded: totalRewarded2 }, reward2Price);
-  // Leg three: BABYAI itself, bought back and handed to holders. Valued at the
+  // Leg three: BABYINU itself, bought back and handed to holders. Valued at the
   // token's own live price (the pool after graduation, the curve before).
   const totalRewardedOwn = rewards.totalRewardedOwn ?? null;
   const totalRewardedOwnUsd =
@@ -171,7 +171,7 @@ function buildStats({
     [`${reward2Symbol.toLowerCase()}Distributed`]: totalRewarded2,
     [`${reward2Symbol.toLowerCase()}DistributedUsd`]: totalRewarded2Usd,
     // ── The THIRD asset: the project's own token, bought back for holders ──
-    // Under its own ticker (`babyaiDistributed`) and under a positional name
+    // Under its own ticker (`babyinuDistributed`) and under a positional name
     // (`ownTokenDistributed`) for a page that does not know the ticker.
     ownTokenDistributed: totalRewardedOwn,
     ownTokenDistributedUsd: totalRewardedOwnUsd,
@@ -216,7 +216,7 @@ function buildStats({
     // NVDA token amount that `totalRewarded` carries.
     totalDistributed: totalRewardedUsd,
     // ── Buyback + burn ──────────────────────────────────────────────────────
-    // BABYAI tokens destroyed. The headline number for the burn tile.
+    // BABYINU tokens destroyed. The headline number for the burn tile.
     totalBurned: burns.totalBurned ?? null,
     // What those buybacks cost, in NVDA — what was actually spent.
     burnQuoteSpent: burns.burnQuoteSpent ?? null,

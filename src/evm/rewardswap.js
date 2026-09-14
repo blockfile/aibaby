@@ -2,7 +2,7 @@
 
 // Buy a REWARD token with claimed quote.
 //
-// Artificial Baby Inu pays holders TWO assets: NVDA, which the fees already arrive
+// Baby Artificial Inu pays holders TWO assets: NVDA, which the fees already arrive
 // in and which therefore needs no swap at all, and AI, which has to be bought
 // first. Both go through here — the leg being paid is passed in, so the same
 // code serves the asset that needs a DEX and the one that does not, and adding
@@ -60,7 +60,7 @@ function rewardLegTwo() {
 }
 
 /**
- * Leg three: BABYAI itself, bought back with OWN_TOKEN_PCT of the claim and
+ * Leg three: BABYINU itself, bought back with OWN_TOKEN_PCT of the claim and
  * airdropped to holders. Its venue is the LAUNCH — the pons curve before
  * graduation, the pons pool after — not a configured pool, so it is bought by
  * the same code the buyback uses rather than by the pool path below.
@@ -202,7 +202,7 @@ async function buyReward({ quoteAmount, reward = rewardLegOne(), launch = null }
  * and the airdrop would try to hand out tokens the wallet does not hold.
  *
  * The airdrop that follows allocates exactly that delta, never the wallet's whole
- * balance: the signing wallet is the creator's and may hold BABYAI that is
+ * balance: the signing wallet is the creator's and may hold BABYINU that is
  * nobody's but theirs.
  */
 async function buyLaunchToken({ quoteAmount, reward, launch }) {

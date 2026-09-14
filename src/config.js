@@ -81,20 +81,20 @@ if (devPayoutAddress && !isAddress(devPayoutAddress)) {
 // simply not funded, and the cycle logs "burn share of this claim is zero" and
 // moves on. Setting BURN_PCT (and lowering REWARD_PCT to match) is all it takes
 // to switch it on; nothing else has to change.
-// Artificial Baby Inu pays holders THREE assets. The split of every claim:
+// Baby Artificial Inu pays holders THREE assets. The split of every claim:
 //
 //   REWARD_PCT     60  -> holders, as NVDA and AI (divided by REWARD2_SHARE_PCT)
-//   OWN_TOKEN_PCT  30  -> buys BABYAI back and airdrops it to holders
-//   BURN_PCT        0  -> buys BABYAI back and burns it (off)
+//   OWN_TOKEN_PCT  30  -> buys BABYINU back and airdrops it to holders
+//   BURN_PCT        0  -> buys BABYINU back and burns it (off)
 //   GAS_PCT        10  -> sold for ETH to pay for the payouts
 //
-// At REWARD2_SHARE_PCT=50 that is 30 NVDA / 30 AI / 30 BABYAI / 10 gas.
+// At REWARD2_SHARE_PCT=50 that is 30 NVDA / 30 AI / 30 BABYINU / 10 gas.
 //
 // OWN_TOKEN_PCT is its OWN leg of the claim rather than a third share of
 // REWARD_PCT on purpose: buying the launch token is a different trade from the
 // other two (the pons curve before graduation, the pons pool after, through a
 // hook that taxes buys), so it deserves a number you can move on its own. It
-// is also deliberately distinct from BURN_PCT: both buy BABYAI, but burning
+// is also deliberately distinct from BURN_PCT: both buy BABYINU, but burning
 // removes it from supply while this hands it to holders — setting one does not
 // fund the other.
 const rewardPct = num(process.env.REWARD_PCT, 60);
@@ -153,17 +153,17 @@ const explorerApi = (process.env.EXPLORER_API || 'https://robinhoodchain.blocksc
 const config = {
   port: num(process.env.PORT, 3000),
 
-  // BABYAI's contract address. Blank until the token is launched — every stat
+  // BABYINU's contract address. Blank until the token is launched — every stat
   // then resolves to null, which the site renders as "—" rather than a zero.
   tokenAddress: lowerOrNull(process.env.TOKEN_ADDRESS),
-  // The site's ticker is $BABYAI (SITE.ticker in its config/site.js).
-  tokenSymbol: process.env.TOKEN_SYMBOL || 'BABYAI',
+  // The site's ticker is $BABYINU (SITE.ticker in its config/site.js).
+  tokenSymbol: process.env.TOKEN_SYMBOL || 'BABYINU',
   // Referenced in several places as `config.quoteSymbol || 'NVDA'` but never
   // actually defined, so every one of those fell through to the literal. Only
   // the burns feed, which had no fallback, exposed it - as a null where the
   // site expects a ticker.
   quoteSymbol: process.env.QUOTE_SYMBOL || 'NVDA',
-  tokenName: process.env.TOKEN_NAME || 'Artificial Baby Inu',
+  tokenName: process.env.TOKEN_NAME || 'Baby Artificial Inu',
   // Whole-token total supply, used ONLY to compute the pre-graduation market
   // cap when Blockscout (the normal source of supply + decimals) is
   // unreachable. Blank = no fallback. Pons V2 launches mint 1,000,000,000.
@@ -233,7 +233,7 @@ const config = {
   holdersTtlMs: num(process.env.HOLDERS_TTL_MS, 120_000),
 
   // ── Pons rewards ("Total NVDA Rewarded") ───────────────────────────────────
-  // BABYAI's 2% creator tax accrues in NVDA (tokenized NVIDIA stock) and routes to a
+  // BABYINU's 2% creator tax accrues in NVDA (tokenized NVIDIA stock) and routes to a
   // per-token fee distributor that pushes payouts to holder wallets. The
   // cumulative "paid to holders" total comes from Pons's public API — the same
   // source their token page renders (see src/services/rewards.js).

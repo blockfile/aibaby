@@ -1,6 +1,6 @@
 'use strict';
 
-// Holder count for BABYAI, from the Blockscout REST API on Robinhood Chain.
+// Holder count for BABYINU, from the Blockscout REST API on Robinhood Chain.
 //
 // This deliberately uses the token summary endpoint
 //   GET {EXPLORER_API}/api/v2/tokens/{address}

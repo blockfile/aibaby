@@ -6,7 +6,7 @@
 //
 // EMPTY ON PURPOSE. This project was cloned from Artificial Cat, whose story is
 // about a cat ("the cluster had stopped rendering cats. It had become one").
-// Serving that on the Artificial Baby Inu site would be worse than serving
+// Serving that on the Baby Artificial Inu site would be worse than serving
 // nothing: an empty array renders an empty terminal, a wrong story renders as
 // true. Put this project's own paragraphs here when the site has them, and
 // restart the API.
