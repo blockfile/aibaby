@@ -21,6 +21,7 @@ async function buildExcludeSet(launch = null) {
   add(config.v2Factory);      // launch plumbing
   add(config.quoteTokenAddress);   // the quote asset's own contract
   add(config.rewardTokenAddress);  // and the reward token's
+  add(config.reward2TokenAddress); // and the second reward token's
   if (launch && launch.curve) add(launch.curve); // unsold supply pre-graduation
   for (const a of config.airdropExclude) add(a);
 

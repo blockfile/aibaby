@@ -193,6 +193,7 @@ async function main() {
   console.log(`  token      : ${config.tokenSymbol} ${config.tokenAddress || '(TOKEN_ADDRESS not set)'}`);
   const legTwoOn = config.reward2SharePct > 0 && config.reward2TokenAddress;
   const holdersPct = config.rewardPct;
+  const ownOn = config.ownTokenPct > 0;
   const legOnePct = +(holdersPct * (1 - config.reward2SharePct / 100)).toFixed(6);
   const legTwoPct = +(holdersPct * (config.reward2SharePct / 100)).toFixed(6);
   console.log(
@@ -203,13 +204,19 @@ async function main() {
     legTwoOn
       ? `  reward 2   : ${config.reward2Symbol} ${config.reward2TokenAddress} ` +
           `(${legTwoPct}% of a claim, BOUGHT through pool ${require('../src/evm/rewardswap').poolIdOf(require('../src/evm/rewardswap').rewardPoolKey(require('../src/evm/rewardswap').rewardLegTwo())).slice(0, 12)}…)`
-      : '  reward 2   : off (REWARD2_SHARE_PCT=0) — holders are paid one asset'
+      : '  reward 2   : off (REWARD2_SHARE_PCT=0)'
+  );
+  console.log(
+    ownOn
+      ? `  reward 3   : ${config.tokenSymbol} ${config.tokenAddress || '(TOKEN_ADDRESS not set)'} ` +
+          `(${config.ownTokenPct}% of a claim, BOUGHT BACK on the launch venue and airdropped — OWN_TOKEN_PCT)`
+      : '  reward 3   : off (OWN_TOKEN_PCT=0) — no own-token buyback for holders'
   );
   console.log(`  explorer   : ${config.explorerApi}`);
   console.log(`  dexscreener: chain "${config.dexscreenerChainId}"`);
   console.log(`  pons api   : ${config.ponsApi}`);
   console.log(
-    `  split      : ${config.rewardPct}% holders / ${config.burnPct}% buyback+burn / ` +
+    `  split      : ${config.rewardPct}% NVDA+AI / ${config.ownTokenPct}% ${config.tokenSymbol} buyback→holders / ${config.burnPct}% buyback+burn / ` +
       `${config.gasPct}% gas / ${config.devPct}% dev`
   );
   // Only worth mentioning when a dev cut actually exists. At the default 80/20
@@ -297,6 +304,9 @@ async function main() {
         ? '  (no second reward asset configured)'
         : `  ${config.reward2Symbol.padEnd(6)}: ${show(rewards.value.totalRewarded2)} paid to holders (real payouts only)`
     );
+    if (rewards.value.totalRewardedOwn !== null && rewards.value.totalRewardedOwn !== undefined) {
+      console.log(`  ${config.tokenSymbol.padEnd(6)}: ${show(rewards.value.totalRewardedOwn)} bought back and paid to holders (real payouts only)`);
+    }
   }
 
   hr('OUR LEDGER (buyback + burn)');
@@ -342,6 +352,7 @@ async function main() {
         rewardTokenAddress: config.rewardTokenAddress,
         reward2Symbol: config.reward2Symbol,
         reward2TokenAddress: config.reward2SharePct > 0 ? config.reward2TokenAddress : null,
+        ownTokenAddress: config.ownTokenPct > 0 ? config.tokenAddress : null,
       }),
       null,
       2

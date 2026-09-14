@@ -149,3 +149,10 @@ test('every row from fetchFeedPage has a well-formed explorer link', async () =>
   await db.close();
   await mongod.stop();
 });
+
+test('a bought-back BABYAI payout is labelled with the project ticker', () => {
+  const config = require('../config');
+  const { symbolForToken } = require('./rewardsfeed');
+  const cfg = { ...config, tokenAddress: '0xbabybabybabybabybabybabybabybabybabybaby', tokenSymbol: 'BABYAI' };
+  assert.strictEqual(symbolForToken('0xBABYbabybabybabybabybabybabybabybabybaby', cfg), 'BABYAI');
+});

@@ -1,6 +1,9 @@
 'use strict';
 
 process.env.DRY_RUN = 'true';
+// The split cases below were written for three legs of a claim; the own-token
+// leg has its own cases at the bottom of this file.
+process.env.OWN_TOKEN_PCT = '0';
 process.env.REWARD_PCT = '65';
 process.env.BURN_PCT = '25';
 process.env.GAS_PCT = '10';
@@ -28,7 +31,7 @@ test('the four legs always re-add to the claim', () => {
 });
 
 test('splitting nothing yields nothing on every leg', () => {
-  assert.deepStrictEqual(splitClaim(0), { rewardQuote: 0, burnQuote: 0, gasQuote: 0, devQuote: 0 });
+  assert.deepStrictEqual(splitClaim(0), { rewardQuote: 0, ownTokenQuote: 0, burnQuote: 0, gasQuote: 0, devQuote: 0 });
 });
 
 test('a dev cut appears only when the three configured legs leave one', () => {
@@ -56,7 +59,7 @@ test('an all-to-holders split leaves nothing to burn or swap', () => {
   process.env.GAS_PCT = '0';
   for (const m of ['../config', './cycle']) delete require.cache[require.resolve(m)];
   const { splitClaim: split } = require('./cycle');
-  assert.deepStrictEqual(split(5), { rewardQuote: 5, burnQuote: 0, gasQuote: 0, devQuote: 0 });
+  assert.deepStrictEqual(split(5), { rewardQuote: 5, ownTokenQuote: 0, burnQuote: 0, gasQuote: 0, devQuote: 0 });
 
   process.env.REWARD_PCT = '65';
   process.env.BURN_PCT = '25';
@@ -254,4 +257,58 @@ test('every name scripts/recover.js imports from cycle.js actually exists', () =
   for (const name of m[1].split(',').map((s) => s.trim()).filter(Boolean)) {
     assert.strictEqual(typeof cycle[name], 'function', `cycle.js must export ${name}`);
   }
+});
+
+// ── The own-token leg (OWN_TOKEN_PCT) ───────────────────────────────────────
+
+function withSplit(env, fn) {
+  const saved = {};
+  for (const k of Object.keys(env)) saved[k] = process.env[k];
+  Object.assign(process.env, env);
+  for (const m of ['../config', './cycle', '../evm/rewardswap']) delete require.cache[require.resolve(m)];
+  try {
+    return fn(require('./cycle'), require('../config'));
+  } finally {
+    Object.assign(process.env, saved);
+    for (const m of ['../config', './cycle', '../evm/rewardswap']) delete require.cache[require.resolve(m)];
+  }
+}
+
+test('a claim splits four ways and re-adds exactly: 30 NVDA / 30 AI / 30 BABYAI / 10 gas', () => {
+  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim, rewardLegPlan }, config) => {
+    const s = splitClaim(100);
+    assert.deepStrictEqual(s, { rewardQuote: 60, ownTokenQuote: 30, burnQuote: 0, gasQuote: 10, devQuote: 0 });
+    const plan = rewardLegPlan(s.rewardQuote, config.reward2SharePct, s.ownTokenQuote);
+    assert.deepStrictEqual(plan.map((l) => [l.reward.symbol, l.quoteAmount]), [['NVDA', 30], ['AI', 30], [config.tokenSymbol, 30]]);
+  });
+});
+
+test('the own-token leg is bought on the LAUNCH, not through a configured pool', () => {
+  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ rewardLegPlan }, config) => {
+    const own = rewardLegPlan(60, 50, 30).find((l) => l.reward.kind === 'launch');
+    assert.ok(own, 'a launch-kind leg is planned');
+    assert.strictEqual(own.reward.tokenAddress, config.tokenAddress);
+    assert.strictEqual(own.reward.leg, 3);
+  });
+});
+
+test('it runs LAST, so a slow launch-venue buy can never delay NVDA or AI', () => {
+  const { rewardLegPlan } = require('./cycle');
+  const plan = rewardLegPlan(60, 50, 30);
+  assert.strictEqual(plan[plan.length - 1].reward.kind, 'launch');
+});
+
+test('an awkward claim still re-adds across all four legs', () => {
+  withSplit({ REWARD_PCT: '60', OWN_TOKEN_PCT: '30', BURN_PCT: '0', GAS_PCT: '10' }, ({ splitClaim }) => {
+    for (const claim of [1.3300426388432187, 1.2546905469948721, 3.7, 0.000000009]) {
+      const s = splitClaim(claim);
+      const sum = +(s.rewardQuote + s.ownTokenQuote + s.burnQuote + s.gasQuote + s.devQuote).toFixed(9);
+      assert.ok(Math.abs(sum - +claim.toFixed(9)) <= 1e-9, `${claim} re-adds (${sum})`);
+    }
+  });
+});
+
+test('OWN_TOKEN_PCT=0 plans no own-token leg at all', () => {
+  const { rewardLegPlan } = require('./cycle');
+  assert.ok(!rewardLegPlan(60, 50, 0).some((l) => l.reward.kind === 'launch'));
 });

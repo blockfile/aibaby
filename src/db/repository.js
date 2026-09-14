@@ -46,7 +46,7 @@ async function finishCycle(id, fields) {
   const db = getDb();
   const allowed = [
     'status', 'mode', 'phase', 'quote_claimed', 'quote_distributed',
-    'quote_burned', 'tokens_burned', 'quote_gas', 'eth_received',
+    'quote_burned', 'tokens_burned', 'quote_gas', 'eth_received', 'quote_own_token',
     'eligible_holders', 'total_holders',
     'sweep_skipped', 'sweep_reason',
     'note', 'error',

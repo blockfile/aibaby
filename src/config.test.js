@@ -12,7 +12,7 @@ const assert = require('node:assert');
 const OWNED = [
   'REWARD_PCT', 'BURN_PCT', 'GAS_PCT', 'TRIGGER_MODE', 'CLAIM_EVERY_USD', 'DEV_PAYOUT_ADDRESS',
   'POLL_SCHEDULE', 'TRIGGER_SCHEDULE', 'TOKEN_SYMBOL', 'MIN_HOLD',
-  'REWARD2_SHARE_PCT', 'REWARD2_TOKEN_ADDRESS', 'REWARD2_SYMBOL',
+  'REWARD2_SHARE_PCT', 'REWARD2_TOKEN_ADDRESS', 'REWARD2_SYMBOL', 'OWN_TOKEN_PCT',
 ];
 
 function loadConfig(env = {}) {
@@ -22,24 +22,25 @@ function loadConfig(env = {}) {
   return require('./config');
 }
 
-test('the default 90/0/10 split leaves no dev cut at all', () => {
-  // This deployment pays holders as much as possible and does not buy back.
-  // BURN_PCT is 0 BY CHOICE, not by oversight: the buyback machinery is intact
-  // and funding it is a one-value change, but nothing burns until it is funded.
+test('the default 60/30/0/10 split pays holders three assets and leaves no dev cut', () => {
+  // 60 to NVDA+AI (30/30 at REWARD2_SHARE_PCT=50), 30 buys BABYAI back for
+  // holders, 10 funds gas. BURN_PCT is 0 BY CHOICE: buying BABYAI back to
+  // DISTRIBUTE is OWN_TOKEN_PCT; burning it is a separate decision, not funded.
   const config = loadConfig({ DRY_RUN: 'true' });
-  assert.strictEqual(config.rewardPct, 90);
+  assert.strictEqual(config.rewardPct, 60);
+  assert.strictEqual(config.ownTokenPct, 30);
   assert.strictEqual(config.burnPct, 0);
   assert.strictEqual(config.gasPct, 10);
   assert.strictEqual(config.devPct, 0);
 });
 
 test('the dev cut is whatever the other three legs leave behind', () => {
-  const config = loadConfig({ REWARD_PCT: '60', BURN_PCT: '20', GAS_PCT: '10', DRY_RUN: 'true' });
+  const config = loadConfig({ REWARD_PCT: '60', OWN_TOKEN_PCT: '0', BURN_PCT: '20', GAS_PCT: '10', DRY_RUN: 'true' });
   assert.strictEqual(config.devPct, 10);
 });
 
 test('a fractional split leaves no floating-point dust in the dev cut', () => {
-  const config = loadConfig({ REWARD_PCT: '80.1', BURN_PCT: '0', GAS_PCT: '0', DRY_RUN: 'true' });
+  const config = loadConfig({ REWARD_PCT: '80.1', OWN_TOKEN_PCT: '0', BURN_PCT: '0', GAS_PCT: '0', DRY_RUN: 'true' });
   assert.strictEqual(config.devPct, 19.9); // not 19.900000000000006
 });
 
@@ -148,8 +149,8 @@ test('the second reward leg defaults to AI at half the holders share', () => {
   assert.strictEqual(config.reward2Symbol, 'AI');
   assert.strictEqual(config.reward2TokenAddress, '0x2e8c31162b855a2ffa90f6f8634643ad6f111e18');
   assert.strictEqual(config.reward2SharePct, 50);
-  // With REWARD_PCT=90 that is 45% of a claim as NVDA and 45% as AI.
-  assert.strictEqual(config.rewardPct, 90);
+  // With REWARD_PCT=60 that is 30% of a claim as NVDA and 30% as AI.
+  assert.strictEqual(config.rewardPct, 60);
 });
 
 test('an out-of-range second share is refused, not clamped', () => {
@@ -173,4 +174,32 @@ test('the second leg can be switched off entirely', () => {
   assert.doesNotThrow(() =>
     loadConfig({ REWARD2_SHARE_PCT: '0', REWARD2_TOKEN_ADDRESS: '0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC', DRY_RUN: 'true' })
   );
+});
+
+// ── OWN_TOKEN_PCT: buy BABYAI back and hand it to holders ────────────────────
+
+test('OWN_TOKEN_PCT is its own leg of the claim, counted in the 100', () => {
+  const config = loadConfig({ REWARD_PCT: '50', OWN_TOKEN_PCT: '40', BURN_PCT: '0', GAS_PCT: '10', DRY_RUN: 'true' });
+  assert.strictEqual(config.ownTokenPct, 40);
+  assert.strictEqual(config.devPct, 0);
+});
+
+test('the four legs together may not exceed the claim — and the error names the new one', () => {
+  assert.throws(
+    () => loadConfig({ REWARD_PCT: '60', OWN_TOKEN_PCT: '40', BURN_PCT: '0', GAS_PCT: '10', DRY_RUN: 'true' }),
+    /OWN_TOKEN_PCT\(40\).*exceeds 100/
+  );
+});
+
+test('an out-of-range OWN_TOKEN_PCT is rejected outright', () => {
+  assert.throws(() => loadConfig({ OWN_TOKEN_PCT: '140', REWARD_PCT: '0', GAS_PCT: '0', DRY_RUN: 'true' }), /OWN_TOKEN_PCT/);
+  assert.throws(() => loadConfig({ OWN_TOKEN_PCT: '-5', DRY_RUN: 'true' }), /OWN_TOKEN_PCT/);
+});
+
+test('OWN_TOKEN_PCT and BURN_PCT are independent — one does not fund the other', () => {
+  // Both buy BABYAI; one hands it to holders, the other destroys it.
+  const config = loadConfig({ REWARD_PCT: '50', OWN_TOKEN_PCT: '20', BURN_PCT: '20', GAS_PCT: '10', DRY_RUN: 'true' });
+  assert.strictEqual(config.ownTokenPct, 20);
+  assert.strictEqual(config.burnPct, 20);
+  assert.strictEqual(config.devPct, 0);
 });

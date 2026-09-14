@@ -34,7 +34,7 @@ const { claimQuoteFromEscrow } = require('../evm/escrow');
 const { getDecimals, getTokenSupplyRaw } = require('../evm/erc20');
 const { snapshotEligibleHolders } = require('../evm/holders');
 const { buildExcludeSet } = require('../evm/exclude');
-const { buyReward, rewardLegOne, rewardLegTwo } = require('../evm/rewardswap');
+const { buyReward, rewardLegOne, rewardLegTwo, ownTokenLeg } = require('../evm/rewardswap');
 const { computeWeightedAllocations } = require('../services/distribution');
 const { airdropToken } = require('../evm/airdrop');
 const { toUnitString } = require('../evm/units');
@@ -61,6 +61,7 @@ function splitClaim(claimedQuote) {
     return r === 0 ? 0 : r;
   };
   const rewardQuote = round(claimedQuote * (config.rewardPct / 100));
+  const ownTokenQuote = round(claimedQuote * (config.ownTokenPct / 100));
   const burnQuote = round(claimedQuote * (config.burnPct / 100));
   const gasQuote = round(claimedQuote * (config.gasPct / 100));
   // The dev leg is the remainder, so it absorbs the rounding of the other
@@ -70,8 +71,8 @@ function splitClaim(claimedQuote) {
   // when DEV_PAYOUT_ADDRESS is unset, but a negative amount reaching parseUnits
   // would throw, and the first person to set that address would be the one to
   // find out.
-  const devQuote = Math.max(0, round(claimedQuote - rewardQuote - burnQuote - gasQuote));
-  return { rewardQuote, burnQuote, gasQuote, devQuote };
+  const devQuote = Math.max(0, round(claimedQuote - rewardQuote - ownTokenQuote - burnQuote - gasQuote));
+  return { rewardQuote, ownTokenQuote, burnQuote, gasQuote, devQuote };
 }
 
 /**
@@ -189,11 +190,17 @@ function splitRewardQuote(rewardQuote, sharePct = config.reward2SharePct) {
  * or no second token configured, gives exactly the single-asset cycle this
  * project ran before — the second reward is a default, not a new code path.
  */
-function rewardLegPlan(rewardQuote, sharePct = config.reward2SharePct) {
+function rewardLegPlan(rewardQuote, sharePct = config.reward2SharePct, ownTokenQuote = 0) {
   const { first, second } = splitRewardQuote(rewardQuote, sharePct);
   const plan = [{ reward: rewardLegOne(), quoteAmount: first }];
   if (sharePct > 0 && config.reward2TokenAddress) {
     plan.push({ reward: rewardLegTwo(), quoteAmount: second });
+  }
+  // Leg three: BABYAI, bought back with its OWN share of the claim. Planned last,
+  // after the two reward assets, so a slow or failing buy on the launch venue can
+  // never delay NVDA or AI reaching holders.
+  if (ownTokenQuote > 0) {
+    plan.push({ reward: ownTokenLeg(), quoteAmount: ownTokenQuote });
   }
   return plan.filter((leg) => leg.quoteAmount > 0);
 }
@@ -224,7 +231,7 @@ function legResult(reward, quoteAmount) {
  * assets out of separate pools, and a dead AI pool must not cost holders the
  * NVDA they were already owed.
  */
-async function runRewardLegs(cycleId, { launch, quoteAmount }) {
+async function runRewardLegs(cycleId, { launch, quoteAmount, ownTokenQuote = 0 }) {
   const log = (m) => console.log(`[cycle ${cycleId}] [reward] ${m}`);
 
   // MIN_HOLD is a whole-token figure; scale it by the TOKEN's own decimals
@@ -245,7 +252,7 @@ async function runRewardLegs(cycleId, { launch, quoteAmount }) {
   const capPct = config.rewardCapPct > 0 ? config.rewardCapPct : null;
   const supplyRaw = capPct == null ? null : (await getTokenSupplyRaw(launch.token)).toString();
 
-  const plan = rewardLegPlan(quoteAmount);
+  const plan = rewardLegPlan(quoteAmount, config.reward2SharePct, ownTokenQuote);
   if (plan.length === 0) {
     const reason = 'reward share of this claim is zero';
     return { recipients: 0, sent: 0, failed: 0, skipped: true, reason, eligibleHolders: holders.length, totalHolders, legs: [] };
@@ -259,7 +266,7 @@ async function runRewardLegs(cycleId, { launch, quoteAmount }) {
     // figure: the pool's hook takes its cut after the swap, so distributing a
     // quote would allocate more than the wallet holds and revert the last batch.
     // For the quote asset itself this hands the claim back untouched, no swap.
-    const buy = await buyReward({ quoteAmount: legQuote, reward });
+    const buy = await buyReward({ quoteAmount: legQuote, reward, launch });
     await repo.addStep({
       cycleId,
       name: 'reward-swap',
@@ -407,9 +414,10 @@ async function runCycle() {
     }
 
     // 3. Split.
-    const { rewardQuote, burnQuote, gasQuote, devQuote } = splitClaim(claimed);
+    const { rewardQuote, ownTokenQuote, burnQuote, gasQuote, devQuote } = splitClaim(claimed);
     log(
-      `split: ${rewardQuote} to holders (${config.rewardPct}%), ` +
+      `split: ${rewardQuote} to holders as NVDA+AI (${config.rewardPct}%), ` +
+        `${ownTokenQuote} to buy ${config.tokenSymbol} for holders (${config.ownTokenPct}%), ` +
         `${burnQuote} to buyback+burn (${config.burnPct}%), ` +
         `${gasQuote} to gas (${config.gasPct}%), ${devQuote} to dev (${config.devPct}%)`
     );
@@ -434,12 +442,12 @@ async function runCycle() {
     // 4. Reward legs — pay the holders' share in each configured asset: NVDA
     //    straight through, and AI bought with its share of it first.
     let reward = { skipped: false, sent: 0, failed: 0, recipients: 0, eligibleHolders: 0, totalHolders: 0 };
-    if (rewardQuote > 0) {
-      reward = { skipped: false, ...(await runRewardLegs(id, { launch, quoteAmount: rewardQuote })) };
+    if (rewardQuote > 0 || ownTokenQuote > 0) {
+      reward = { skipped: false, ...(await runRewardLegs(id, { launch, quoteAmount: rewardQuote, ownTokenQuote })) };
     } else {
       const reason = 'reward share of this claim is zero';
       reward = { ...reward, skipped: true, reason };
-      await repo.addStep({ cycleId: id, name: 'reward', status: 'skipped', detail: { reason, rewardQuote } });
+      await repo.addStep({ cycleId: id, name: 'reward', status: 'skipped', detail: { reason, rewardQuote, ownTokenQuote } });
       log(`reward leg skipped: ${reason}`);
     }
 
@@ -492,7 +500,9 @@ async function runCycle() {
       mode: 'reward',
       phase,
       quote_claimed: claimed,
-      quote_distributed: reward.skipped ? 0 : rewardQuote,
+      // Everything spent on holder payouts, whichever asset it became.
+      quote_distributed: reward.skipped ? 0 : +(rewardQuote + ownTokenQuote).toFixed(9),
+      quote_own_token: reward.skipped ? 0 : ownTokenQuote,
       quote_gas: gas.swapped ? gasQuote : 0,
       eth_received: gas.ethReceived,
       quote_burned: buyback.burned ? burnQuote : 0,

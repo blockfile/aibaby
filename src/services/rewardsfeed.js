@@ -56,6 +56,8 @@ function symbolForToken(token, cfg = config) {
   const t = String(token || '').toLowerCase();
   if (t && t === String(cfg.reward2TokenAddress || '').toLowerCase()) return cfg.reward2Symbol;
   if (t && t === String(cfg.rewardTokenAddress || '').toLowerCase()) return cfg.rewardSymbol;
+  // The project's own token, bought back and paid out by OWN_TOKEN_PCT.
+  if (t && t === String(cfg.tokenAddress || '').toLowerCase()) return cfg.tokenSymbol;
   return null;
 }
 

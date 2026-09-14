@@ -50,6 +50,7 @@ function buildStatus({ scheduler: s, feeCheck, walletAddress: address, ethBalanc
     // leave an operator hunting for the missing third.
     split: {
       rewardPct: config.rewardPct,
+      ownTokenPct: config.ownTokenPct,
       burnPct: config.burnPct,
       gasPct: config.gasPct,
       devPct: config.devPct,

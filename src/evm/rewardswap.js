@@ -23,6 +23,8 @@ const { buyViaV4Buyer } = require('./v4buyer');
 const { erc20, getDecimals } = require('./erc20');
 const { provider, wallet } = require('./provider');
 const { toUnitString } = require('./units');
+// Required lazily inside buyLaunchToken: buyback pulls in the DB repository, and
+// a module-load dependency here would make every reward-swap import need Mongo.
 const { parseUnits } = require('ethers');
 
 /**
@@ -57,6 +59,22 @@ function rewardLegTwo() {
   };
 }
 
+/**
+ * Leg three: BABYAI itself, bought back with OWN_TOKEN_PCT of the claim and
+ * airdropped to holders. Its venue is the LAUNCH — the pons curve before
+ * graduation, the pons pool after — not a configured pool, so it is bought by
+ * the same code the buyback uses rather than by the pool path below.
+ */
+function ownTokenLeg() {
+  return {
+    leg: 3,
+    kind: 'launch',
+    tokenAddress: config.tokenAddress,
+    decimals: config.tokenDecimals,
+    symbol: config.tokenSymbol,
+  };
+}
+
 /** The pool that buys this leg. Configured, not derived — it is an ordinary
  *  Uniswap pool with no launch record to read it from. */
 function rewardPoolKey(reward = rewardLegOne()) {
@@ -77,13 +95,15 @@ function clampToBalance(wanted, held) {
 /**
  * Swap `quoteAmount` of NVDA for this leg's reward token, into this wallet.
  *
- * @param {{quoteAmount: number, reward?: object}} args `reward` defaults to leg one.
+ * @param {{quoteAmount: number, reward?: object, launch?: object}} args
+ *   `reward` defaults to leg one; `launch` is needed only by the own-token leg.
  * @returns {Promise<{bought: boolean, tokensBought: number, signature: string|null,
  *                    quoteSpent: number, error?: string}>}
  */
-async function buyReward({ quoteAmount, reward = rewardLegOne() }) {
+async function buyReward({ quoteAmount, reward = rewardLegOne(), launch = null }) {
   const base = { bought: false, tokensBought: 0, signature: null, quoteSpent: 0 };
-  if (!(quoteAmount > 0)) return { ...base, skipped: true, reason: 'reward share of this claim is zero' };
+  if (!(quoteAmount > 0)) return { ...base, skipped: true, reason: `${reward.symbol} share of this claim is zero` };
+  if (reward.kind === 'launch') return buyLaunchToken({ quoteAmount, reward, launch });
 
   // When holders are paid the SAME asset the fees arrive in, there is nothing
   // to buy: the claim is already denominated in the reward token. Skipping the
@@ -172,4 +192,63 @@ async function buyReward({ quoteAmount, reward = rewardLegOne() }) {
   };
 }
 
-module.exports = { buyReward, rewardPoolKey, rewardLegOne, rewardLegTwo, clampToBalance, poolIdOf };
+/**
+ * Buy the launch token with `quoteAmount` of NVDA, into this wallet.
+ *
+ * Delegates to buyback's buyToken, which already dispatches on the launch's
+ * phase, re-quotes on each of its attempts, and — the part that matters here —
+ * returns the BALANCE DELTA rather than a quote. The pons hook takes its tax on
+ * a buy in the memecoin itself, so a quoted figure would overstate what arrived
+ * and the airdrop would try to hand out tokens the wallet does not hold.
+ *
+ * The airdrop that follows allocates exactly that delta, never the wallet's whole
+ * balance: the signing wallet is the creator's and may hold BABYAI that is
+ * nobody's but theirs.
+ */
+async function buyLaunchToken({ quoteAmount, reward, launch }) {
+  const base = { bought: false, tokensBought: 0, signature: null, quoteSpent: 0 };
+  if (!reward.tokenAddress) return { ...base, skipped: true, reason: 'TOKEN_ADDRESS is not set' };
+
+  if (config.dryRun) {
+    // The same magnitude buybackAndBurn simulates, so a rehearsal's numbers are
+    // the right order and a dry run never needs an RPC.
+    const tokens = +(quoteAmount * 1_000_000).toFixed(9);
+    const boughtRaw = parseUnits(toUnitString(tokens, reward.decimals), reward.decimals);
+    return {
+      bought: boughtRaw > 0n,
+      boughtRaw,
+      tokensBought: tokens,
+      quoteSpent: quoteAmount,
+      signature: `ownbuy_${Date.now().toString(36)}`,
+      venue: 'sim',
+    };
+  }
+  if (!launch) throw new Error(`buying ${reward.symbol} needs the launch record, to know which venue it trades on`);
+
+  const wantRaw = parseUnits(toUnitString(quoteAmount, config.quoteDecimals), config.quoteDecimals);
+  const held = await erc20(config.quoteTokenAddress, provider).balanceOf(wallet.address);
+  const spendRaw = clampToBalance(wantRaw, held);
+  if (spendRaw <= 0n) {
+    return { ...base, skipped: true, reason: `the wallet holds no NVDA to buy ${reward.symbol} with` };
+  }
+
+  // eslint-disable-next-line global-require
+  const { buyToken } = require('./buyback');
+  const { signature, boughtRaw, venue } = await buyToken({ launch, quoteAmountRaw: spendRaw });
+  const decimals = await getDecimals(reward.tokenAddress);
+  const got = boughtRaw > 0n ? boughtRaw : 0n;
+  console.log(
+    `[own-token] bought ${formatUnits(got, decimals)} ${reward.symbol} on ${venue} ` +
+      `for ${formatUnits(spendRaw, config.quoteDecimals)} ${config.quoteSymbol}: ${signature}`
+  );
+  return {
+    bought: got > 0n,
+    boughtRaw: got,
+    tokensBought: Number(formatUnits(got, decimals)),
+    quoteSpent: Number(formatUnits(spendRaw, config.quoteDecimals)),
+    signature,
+    venue,
+  };
+}
+
+module.exports = { buyReward, rewardPoolKey, rewardLegOne, rewardLegTwo, ownTokenLeg, clampToBalance, poolIdOf };

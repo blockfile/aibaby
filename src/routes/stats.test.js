@@ -425,3 +425,47 @@ test('totalRewarded2 mirrors totalRewarded, for positional readers', () => {
   assert.strictEqual(out.totalRewarded2, 7300);
   assert.strictEqual(out.totalRewarded2Usd, 2190);
 });
+
+// ── Three assets: the bought-back BABYAI leg ────────────────────────────────
+
+const threeAssets = (rewards, price, p1, p2) =>
+  buildStats({
+    market: { priceUsd: price }, token: {}, rewards, curve: {}, quote: {},
+    rewardPrice: p1, reward2Price: p2,
+    symbol: 'BABYAI', tokenAddress: '0xbaby',
+    rewardSymbol: 'NVDA', rewardTokenAddress: '0xnvda',
+    reward2Symbol: 'AI', reward2TokenAddress: '0xai',
+    ownTokenAddress: '0xbaby',
+  });
+
+test('the bought-back BABYAI is served under its ticker and a positional name', () => {
+  const out = threeAssets({ totalRewarded: 10, totalRewarded2: 7300, totalRewardedOwn: 5_000_000 }, 0.00004, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.strictEqual(out.babyaiDistributed, 5_000_000);
+  assert.strictEqual(out.ownTokenDistributed, 5_000_000);
+  // 5,000,000 x 0.00004 is 200.00000000000003 in floating point.
+  assert.ok(Math.abs(out.babyaiDistributedUsd - 200) < 1e-9);
+  assert.ok(Math.abs(out.ownTokenDistributedUsd - 200) < 1e-9);
+});
+
+test('distributedUsdTotal adds all three assets, each at its own price', () => {
+  const out = threeAssets({ totalRewarded: 10, totalRewarded2: 7300, totalRewardedOwn: 5_000_000 }, 0.00004, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.ok(Math.abs(out.distributedUsdTotal - (2210 + 2190 + 200)) < 1e-9);
+  assert.deepStrictEqual(out.rewardAssets.map((a) => a.symbol), ['NVDA', 'AI', 'BABYAI']);
+});
+
+test('an unpriced BABYAI (no pool yet) keeps its amount and does not blank the total', () => {
+  const out = threeAssets({ totalRewarded: 10, totalRewarded2: 7300, totalRewardedOwn: 5_000_000 }, null, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.strictEqual(out.babyaiDistributed, 5_000_000);
+  assert.strictEqual(out.babyaiDistributedUsd, null);
+  assert.strictEqual(out.distributedUsdTotal, 2210 + 2190);
+});
+
+test('with OWN_TOKEN_PCT off the third asset is absent, not "0 paid"', () => {
+  const out = buildStats({
+    market: {}, token: {}, rewards: { totalRewarded: 1, totalRewarded2: 1, totalRewardedOwn: null },
+    curve: {}, quote: {}, rewardPrice: { priceUsd: 1 }, reward2Price: { priceUsd: 1 },
+    symbol: 'BABYAI', tokenAddress: '0xbaby', ownTokenAddress: null,
+  });
+  assert.strictEqual(out.ownTokenDistributed, null);
+  assert.ok(!out.rewardAssets.some((a) => a.symbol === 'BABYAI'));
+});

@@ -127,6 +127,7 @@ function buildStats({
   reward2TokenAddress = null,
   rewardSymbol = 'NVDA',
   rewardTokenAddress = null,
+  ownTokenAddress = null,
 }) {
   const token = withSupplyFallback(explorerToken, supply);
   const priceUsd = market.priceUsd ?? curve.priceUsd ?? null;
@@ -137,8 +138,15 @@ function buildStats({
   // overstate it by three orders of magnitude.
   const totalRewarded2 = rewards.totalRewarded2 ?? null;
   const totalRewarded2Usd = rewardedUsd({ totalRewarded: totalRewarded2 }, reward2Price);
-  const sumUsd = (a, b) =>
-    typeof a !== 'number' && typeof b !== 'number' ? null : (typeof a === 'number' ? a : 0) + (typeof b === 'number' ? b : 0);
+  // Leg three: BABYAI itself, bought back and handed to holders. Valued at the
+  // token's own live price (the pool after graduation, the curve before).
+  const totalRewardedOwn = rewards.totalRewardedOwn ?? null;
+  const totalRewardedOwnUsd =
+    typeof totalRewardedOwn === 'number' && typeof priceUsd === 'number' ? totalRewardedOwn * priceUsd : null;
+  // Null only when NO leg is priced; a priced leg plus an unpriced one is the
+  // priced leg, never null — one unlisted asset must not blank the others.
+  const sumUsd = (...xs) =>
+    xs.some((x) => typeof x === 'number') ? xs.reduce((n, x) => n + (typeof x === 'number' ? x : 0), 0) : null;
   const holders = token.holders ?? null;
   const marketCap = market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token);
   return {
@@ -162,14 +170,23 @@ function buildStats({
     totalRewarded2Usd,
     [`${reward2Symbol.toLowerCase()}Distributed`]: totalRewarded2,
     [`${reward2Symbol.toLowerCase()}DistributedUsd`]: totalRewarded2Usd,
-    // Everything holders were paid, in dollars, across both assets — the one
-    // figure that is comparable between them. Null only when neither leg has a
-    // price; a priced leg plus an unpriced one is the priced leg, not null.
-    distributedUsdTotal: sumUsd(totalRewardedUsd, totalRewarded2Usd),
+    // ── The THIRD asset: the project's own token, bought back for holders ──
+    // Under its own ticker (`babyaiDistributed`) and under a positional name
+    // (`ownTokenDistributed`) for a page that does not know the ticker.
+    ownTokenDistributed: totalRewardedOwn,
+    ownTokenDistributedUsd: totalRewardedOwnUsd,
+    [`${String(symbol || 'token').toLowerCase()}Distributed`]: totalRewardedOwn,
+    [`${String(symbol || 'token').toLowerCase()}DistributedUsd`]: totalRewardedOwnUsd,
+    // Everything holders were paid, in dollars, across all three assets — the
+    // one figure that is comparable between them.
+    distributedUsdTotal: sumUsd(totalRewardedUsd, totalRewarded2Usd, totalRewardedOwnUsd),
     // The whole set, for a page that would rather loop than hardcode tickers.
     rewardAssets: [
       { symbol: rewardSymbol, tokenAddress: rewardTokenAddress, amount: totalRewarded, amountUsd: totalRewardedUsd },
       { symbol: reward2Symbol, tokenAddress: reward2TokenAddress, amount: totalRewarded2, amountUsd: totalRewarded2Usd },
+      ...(ownTokenAddress
+        ? [{ symbol, tokenAddress: ownTokenAddress, amount: totalRewardedOwn, amountUsd: totalRewardedOwnUsd }]
+        : []),
     ].filter((a) => a.symbol),
     // The Neko-template site (tokenmeme15) reads these two first and falls back
     // to the camelCase names; serving both means a frontend rename cannot break it.
@@ -315,6 +332,7 @@ router.get('/stats', async (req, res, next) => {
         rewardTokenAddress: config.rewardTokenAddress,
         reward2Symbol: config.reward2Symbol,
         reward2TokenAddress: config.reward2SharePct > 0 ? config.reward2TokenAddress : null,
+        ownTokenAddress: config.ownTokenPct > 0 ? config.tokenAddress : null,
       })
     );
   } catch (err) {

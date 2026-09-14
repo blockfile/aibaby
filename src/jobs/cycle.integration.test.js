@@ -7,6 +7,9 @@
 // amounts add up exactly, and that a dry run needs no network at all.
 
 process.env.DRY_RUN = 'true';
+// The scenarios below predate the own-token leg and exercise the other legs;
+// the three-asset cycle has its own test at the end.
+process.env.OWN_TOKEN_PCT = '0';
 process.env.REWARD_PCT = '65';
 process.env.BURN_PCT = '25';
 process.env.GAS_PCT = '10';
@@ -279,6 +282,58 @@ test('recorded payouts sum EXACTLY to the amount distributed — no dust', async
     parseUnits(toUnitString(swap.detail.tokensBought, config.reward2Decimals), config.reward2Decimals),
     'every unit of AI bought reaches a holder'
   );
+});
+
+test('a three-asset cycle pays NVDA, AI AND bought-back BABYAI, each to the last unit', async () => {
+  process.env.REWARD_PCT = '60';
+  process.env.OWN_TOKEN_PCT = '30';
+  process.env.BURN_PCT = '0';
+  process.env.GAS_PCT = '10';
+  const RELOAD = ['../config', '../evm/buyback', '../evm/devpayout', '../evm/rewardswap', './cycle'];
+  for (const m of RELOAD) delete require.cache[require.resolve(m)];
+  const cfg = require('../config');
+  const { runCycle: run } = require('./cycle');
+
+  try {
+    simvault.reset(10);
+    const cycle = await run();
+    assert.strictEqual(cycle.status, 'complete', cycle.error || '');
+    assert.strictEqual(cycle.quote_claimed, 10);
+    assert.strictEqual(cycle.quote_distributed, 9, '90% of the claim reached holders, across three assets');
+    assert.strictEqual(cycle.quote_own_token, 3, '30% of it bought BABYAI for them');
+    assert.strictEqual(cycle.quote_gas, 1);
+    assert.strictEqual(cycle.quote_burned, 0, 'buying BABYAI to DISTRIBUTE is not a burn');
+
+    const swaps = cycle.steps.filter((s) => s.name === 'reward-swap');
+    assert.deepStrictEqual(swaps.map((s) => s.detail.symbol), ['NVDA', 'AI', cfg.tokenSymbol]);
+    assert.deepStrictEqual(swaps.map((s) => s.detail.quoteSpent), [3, 3, 3]);
+
+    const air = await db.getDb().collection('airdrops').find({ cycle_id: cycle.id }).toArray();
+    const rawIn = (token) =>
+      air.filter((r) => r.reward_token.toLowerCase() === String(token).toLowerCase()).reduce((n, r) => n + BigInt(r.amount_raw), 0n);
+
+    // The BABYAI leg hands out exactly what the buy returned — never the wallet's
+    // whole balance, which on a live launch includes the creator's own tokens.
+    const ownSwap = swaps.find((s) => s.detail.symbol === cfg.tokenSymbol);
+    assert.ok(ownSwap.detail.tokensBought > 0);
+    assert.strictEqual(
+      rawIn(cfg.tokenAddress),
+      parseUnits(toUnitString(ownSwap.detail.tokensBought, cfg.tokenDecimals), cfg.tokenDecimals),
+      'every BABYAI bought reaches a holder, and nothing more'
+    );
+    assert.ok(rawIn(cfg.rewardTokenAddress) > 0n, 'NVDA was paid');
+    assert.ok(rawIn(cfg.reward2TokenAddress) > 0n, 'AI was paid');
+
+    // Not a burn: the burn ledger, and therefore totalBurned, must not move.
+    const buyback = cycle.steps.find((s) => s.name === 'buyback');
+    assert.strictEqual(buyback.status, 'skipped');
+  } finally {
+    process.env.REWARD_PCT = '65';
+    process.env.OWN_TOKEN_PCT = '0';
+    process.env.BURN_PCT = '25';
+    process.env.GAS_PCT = '10';
+    for (const m of RELOAD) delete require.cache[require.resolve(m)];
+  }
 });
 
 test('a dry run makes no network call — it completed with no RPC reachable', async () => {
