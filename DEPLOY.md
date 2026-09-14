@@ -391,7 +391,8 @@ configuration downstream fixes it.
 Then the full preflight, which does need the key:
 
 ```bash
-nano .env      # set TOKEN_ADDRESS and WALLET_PRIVATE_KEY
+node scripts/find-deploy-block.js 0xYOUR_TOKEN   # prints HOLDER_INDEX_FROM_BLOCK
+nano .env      # set TOKEN_ADDRESS, WALLET_PRIVATE_KEY and HOLDER_INDEX_FROM_BLOCK
 npm run check  # the feeRecip. line MUST show ✓
 ```
 
