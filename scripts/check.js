@@ -11,6 +11,15 @@
 // config mistake (wrong CA, wrong chain slug, wrong wallet) apart from a token
 // that simply has not launched yet.
 
+// Piping this into head (npm run check | head -20) closes stdout after the
+// lines head wanted, and the next console.log then throws EPIPE with a stack
+// trace that reads like the preflight itself failed. It did not — the reader
+// simply stopped reading — so exit quietly. Any other stdout error is real.
+process.stdout.on('error', (err) => {
+  if (err.code === 'EPIPE') process.exit(0);
+  throw err;
+});
+
 const { formatEther, formatUnits, id } = require('ethers');
 const config = require('../src/config');
 const db = require('../src/db');
