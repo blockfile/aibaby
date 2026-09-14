@@ -38,6 +38,10 @@ function buildStatus({ scheduler: s, feeCheck, walletAddress: address, ethBalanc
     nvdaPriceUsd: s.lastPriceUsd ?? null,
     trigger: {
       mode: config.triggerMode,
+      // Both gates, because the mode decides which one is live: token mode fires
+      // on claimEveryTokens and never reads claimEveryUsd. Reporting only the
+      // dollar figure left a token-mode bot with its real threshold invisible.
+      claimEveryTokens: config.claimEveryTokens,
       claimEveryUsd: config.claimEveryUsd,
       // Both cadences. "Why has it not paid out?" is answered by the trigger
       // schedule, not the poll — reporting only the poll made a bot working

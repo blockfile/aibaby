@@ -71,3 +71,9 @@ test('status reports BOTH schedules — how often it looks and when it may pay',
   assert.strictEqual(out.trigger.pollSchedule, '* * * * *', 'how often it looks');
   assert.strictEqual(out.trigger.schedule, '* * * * *', 'when it may actually pay — every minute, no window');
 });
+
+test('status reports the token threshold, which is the live gate in token mode', () => {
+  const out = buildStatus({ scheduler: {}, feeCheck: null, walletAddress: '0xabc', ethBalance: 1 });
+  assert.strictEqual(out.trigger.mode, 'token');
+  assert.strictEqual(out.trigger.claimEveryTokens, 1, 'the 1 NVDA gate must be visible, not just the unused dollar one');
+});
