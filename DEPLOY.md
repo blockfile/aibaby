@@ -304,8 +304,18 @@ normaliser reads `json.data ?? json.rewards ?? json` and throws on anything that
 is not an array, so a missing `data` renders as "Unexpected rewards payload
 shape" against a perfectly healthy API.
 
-Then point the site at it (`VITE_API_BASE_URL=https://api.babyartificialinu.com`,
-`VITE_USE_MOCK=false`) and redeploy the frontend.
+Then point the site at it and redeploy the frontend. This project's site
+(goodsht-meme6) takes the **full stats URL**, not a base URL — it fetches the
+variable as-is, so leaving off `/stats` hits the API's index and fails the panel:
+
+```ini
+VITE_STATS_API_URL=https://api.babyartificialinu.com/stats
+```
+
+Its stats panel reads `marketCap`, `aiDistributed` and `nvdaDistributed` as
+**dollars**, which is what this API serves under those names (token counts are
+`*DistributedTokens`). It does not show the bought-back BABYINU or the holder
+count; both are in `/stats` (`babyinuDistributed`, `totalHolders`) for when it does.
 
 ## 11. Dry run
 

@@ -151,32 +151,55 @@ function buildStats({
   const marketCap = market.marketCap ?? token.circulatingMarketCap ?? curveMarketCap(curve, token);
   return {
     marketCap,
-    // ── The Cat-template site (its src/api/stats.js) ─────────────────────
-    // Reads exactly these four and renders any non-number as "—":
-    //   marketCapUsd, nvdaDistributed (TOKENS — the panel appends "$NVDA"),
-    //   nvdaDistributedUsd ("≈ $… routed to holders"), totalHolders.
-    // The amount is the bot's own ledger total, which counts only payouts
-    // with a real transaction hash, so the tile can never show a DRY_RUN.
+    // ── This project's site: goodsht-meme6, src/api/stats.js ─────────────
+    // Its normalise() reads marketCap, aiDistributed and nvdaDistributed, prints
+    // all three through formatUsd — as DOLLARS — and throws
+    // MALFORMED_STATS_PAYLOAD unless all three survive Number(). So in THIS API
+    // every `<asset>Distributed` is a USD figure, `<asset>DistributedTokens` is
+    // the token count, and `<asset>DistributedUsd` repeats the dollars under an
+    // unambiguous name.
+    //
+    // This deliberately differs from the Cat fork, whose site read
+    // nvdaDistributed as a token count. Serving tokens here would have shown
+    // "$30" for 30 NVDA (~220x low) and "$19.0K" for 19,000 AI (~3.3x high).
+    //
+    // The keys are always present, null when unsourced: Number(undefined) is NaN
+    // and would fail the whole panel, while Number(null) is 0 and renders.
+    // Amounts come from the bot's own ledger, which counts only payouts with a
+    // real transaction hash, so no tile can ever show a DRY_RUN.
     marketCapUsd: marketCap,
-    nvdaDistributed: totalRewarded,
+    // The END of each fallback chain in the site's normalise(), served with the
+    // same value. It writes Number(raw.marketCap ?? raw.market_cap ?? raw.mcap),
+    // and ?? treats null as missing: with only marketCap present, an unknown
+    // (null) value fell through to an ABSENT alternate, Number(undefined) is NaN,
+    // and the whole panel read UPLINK FAILED — before launch, and on any cold
+    // start before a price loads. Present-but-null survives the chain as null,
+    // which Number() turns into 0.
+    market_cap: marketCap,
+    mcap: marketCap,
+    ai_distributed: totalRewarded2Usd,
+    nvda_distributed: totalRewardedUsd,
+    nvdaDistributed: totalRewardedUsd,
     nvdaDistributedUsd: totalRewardedUsd,
-    // ── The SECOND reward asset ───────────────────────────────────────────
-    // Served under its own ticker (`aiDistributed`, `aiDistributedUsd`) beside
-    // the NVDA pair above, so a page renders one tile per asset and neither
-    // number is ever printed under the other's name.
-    // `totalRewarded2` mirrors `totalRewarded` above, for a caller that reads the
-    // legs positionally rather than by ticker.
+    nvdaDistributedTokens: totalRewarded,
+    // ── The SECOND reward asset (AI) ─────────────────────────────────────
+    // `totalRewarded2` mirrors `totalRewarded` below, for a caller that reads the
+    // legs positionally rather than by ticker (token counts).
     totalRewarded2,
     totalRewarded2Usd,
-    [`${reward2Symbol.toLowerCase()}Distributed`]: totalRewarded2,
+    [`${reward2Symbol.toLowerCase()}Distributed`]: totalRewarded2Usd,
     [`${reward2Symbol.toLowerCase()}DistributedUsd`]: totalRewarded2Usd,
+    [`${reward2Symbol.toLowerCase()}DistributedTokens`]: totalRewarded2,
     // ── The THIRD asset: the project's own token, bought back for holders ──
-    // Under its own ticker (`babyinuDistributed`) and under a positional name
-    // (`ownTokenDistributed`) for a page that does not know the ticker.
-    ownTokenDistributed: totalRewardedOwn,
+    // Under its own ticker (`babyinuDistributed`) and a positional name
+    // (`ownTokenDistributed`) for a page that does not know the ticker. Same
+    // rule: *Distributed is dollars, *DistributedTokens is the count.
+    ownTokenDistributed: totalRewardedOwnUsd,
     ownTokenDistributedUsd: totalRewardedOwnUsd,
-    [`${String(symbol || 'token').toLowerCase()}Distributed`]: totalRewardedOwn,
+    ownTokenDistributedTokens: totalRewardedOwn,
+    [`${String(symbol || 'token').toLowerCase()}Distributed`]: totalRewardedOwnUsd,
     [`${String(symbol || 'token').toLowerCase()}DistributedUsd`]: totalRewardedOwnUsd,
+    [`${String(symbol || 'token').toLowerCase()}DistributedTokens`]: totalRewardedOwn,
     // Everything holders were paid, in dollars, across all three assets — the
     // one figure that is comparable between them.
     distributedUsdTotal: sumUsd(totalRewardedUsd, totalRewarded2Usd, totalRewardedOwnUsd),

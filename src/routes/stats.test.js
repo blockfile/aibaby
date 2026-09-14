@@ -329,10 +329,10 @@ test('no creator-fee data at all leaves the tile hidden rather than zeroed', () 
 // routed to holders" footnote) and totalHolders. Only the last existed under
 // that name, so against the live API three of the four tiles were dashes.
 
-test('serves the four fields the Cat-template site reads, under its names', () => {
+test('the token count and its dollar value are both served, under explicit names', () => {
   const out = build({ marketCap: 4_812_400 }, { holders: 18_742 }, { totalRewarded: 1284.62 }, {}, { priceUsd: 170 });
   assert.strictEqual(out.marketCapUsd, 4_812_400);
-  assert.strictEqual(out.nvdaDistributed, 1284.62); // tokens, not dollars
+  assert.strictEqual(out.nvdaDistributedTokens, 1284.62);
   assert.strictEqual(out.nvdaDistributedUsd, 1284.62 * 170);
   assert.strictEqual(out.totalHolders, 18_742);
 });
@@ -375,9 +375,9 @@ const twoAssets = (rewards, p1, p2) =>
 
 test('each reward asset is served under its own ticker, with its own price', () => {
   const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, { priceUsd: 221 }, { priceUsd: 0.3 });
-  assert.strictEqual(out.nvdaDistributed, 10);
+  assert.strictEqual(out.nvdaDistributedTokens, 10);
   assert.strictEqual(out.nvdaDistributedUsd, 2210);
-  assert.strictEqual(out.aiDistributed, 7300);
+  assert.strictEqual(out.aiDistributedTokens, 7300);
   assert.strictEqual(out.aiDistributedUsd, 2190);
 });
 
@@ -398,7 +398,8 @@ test('one unpriced leg does not blank the other', () => {
   const out = twoAssets({ totalRewarded: 10, totalRewarded2: 7300 }, { priceUsd: 221 }, {});
   assert.strictEqual(out.aiDistributedUsd, null);
   assert.strictEqual(out.distributedUsdTotal, 2210);
-  assert.strictEqual(out.aiDistributed, 7300, 'the token amount is still known');
+  assert.strictEqual(out.aiDistributedTokens, 7300, 'the token amount is still known');
+  assert.strictEqual(out.aiDistributed, null, 'but its dollar value is not — never a guess');
 });
 
 test('with neither leg priced the dollar total is null, not zero', () => {
@@ -440,8 +441,8 @@ const threeAssets = (rewards, price, p1, p2) =>
 
 test('the bought-back BABYINU is served under its ticker and a positional name', () => {
   const out = threeAssets({ totalRewarded: 10, totalRewarded2: 7300, totalRewardedOwn: 5_000_000 }, 0.00004, { priceUsd: 221 }, { priceUsd: 0.3 });
-  assert.strictEqual(out.babyinuDistributed, 5_000_000);
-  assert.strictEqual(out.ownTokenDistributed, 5_000_000);
+  assert.strictEqual(out.babyinuDistributedTokens, 5_000_000);
+  assert.strictEqual(out.ownTokenDistributedTokens, 5_000_000);
   // 5,000,000 x 0.00004 is 200.00000000000003 in floating point.
   assert.ok(Math.abs(out.babyinuDistributedUsd - 200) < 1e-9);
   assert.ok(Math.abs(out.ownTokenDistributedUsd - 200) < 1e-9);
@@ -455,7 +456,7 @@ test('distributedUsdTotal adds all three assets, each at its own price', () => {
 
 test('an unpriced BABYINU (no pool yet) keeps its amount and does not blank the total', () => {
   const out = threeAssets({ totalRewarded: 10, totalRewarded2: 7300, totalRewardedOwn: 5_000_000 }, null, { priceUsd: 221 }, { priceUsd: 0.3 });
-  assert.strictEqual(out.babyinuDistributed, 5_000_000);
+  assert.strictEqual(out.babyinuDistributedTokens, 5_000_000);
   assert.strictEqual(out.babyinuDistributedUsd, null);
   assert.strictEqual(out.distributedUsdTotal, 2210 + 2190);
 });
@@ -468,4 +469,52 @@ test('with OWN_TOKEN_PCT off the third asset is absent, not "0 paid"', () => {
   });
   assert.strictEqual(out.ownTokenDistributed, null);
   assert.ok(!out.rewardAssets.some((a) => a.symbol === 'BABYINU'));
+});
+
+// ── This project's site: goodsht-meme6, src/api/stats.js ────────────────────
+//
+// Its normalise() reads marketCap, aiDistributed and nvdaDistributed, prints
+// all three through formatUsd — as DOLLARS — and throws MALFORMED_STATS_PAYLOAD
+// unless all three are finite numbers. These field names used to carry TOKEN
+// counts (the Cat site's contract), which against this site would have shown
+// "$30" for 30 NVDA (~220x low) and "$19.0K" for 19,000 AI (~3.3x high).
+
+test('nvdaDistributed and aiDistributed are DOLLARS — what this site prints with a $', () => {
+  const out = twoAssets({ totalRewarded: 30, totalRewarded2: 19_000 }, { priceUsd: 220 }, { priceUsd: 0.3 });
+  assert.strictEqual(out.nvdaDistributed, 6600);
+  assert.ok(Math.abs(out.aiDistributed - 5700) < 1e-9);
+  // The same figures under the explicit names, so neither reading can drift.
+  assert.strictEqual(out.nvdaDistributed, out.nvdaDistributedUsd);
+  assert.strictEqual(out.aiDistributed, out.aiDistributedUsd);
+});
+
+test('the third asset follows the same rule: babyinuDistributed is dollars', () => {
+  const out = threeAssets({ totalRewarded: 10, totalRewarded2: 7300, totalRewardedOwn: 5_000_000 }, 0.00004, { priceUsd: 221 }, { priceUsd: 0.3 });
+  assert.ok(Math.abs(out.babyinuDistributed - 200) < 1e-9);
+  assert.ok(Math.abs(out.ownTokenDistributed - 200) < 1e-9);
+});
+
+test("the site's own normalise() accepts the payload even when nothing is sourced", () => {
+  // Mirrors goodsht-meme6/src/api/stats.js EXACTLY, fallback chains included.
+  // An earlier version of this test called Number(out.aiDistributed) and passed
+  // on null — but the site writes Number(raw.aiDistributed ?? raw.ai_distributed),
+  // and ?? treats null as missing: it falls through to ai_distributed, which was
+  // absent, so Number(undefined) is NaN and the WHOLE panel reads UPLINK FAILED —
+  // before launch, and on any cold start before a price has loaded.
+  const siteNormalise = (raw) => {
+    const marketCap = Number(raw.marketCap ?? raw.market_cap ?? raw.mcap);
+    const aiDistributed = Number(raw.aiDistributed ?? raw.ai_distributed);
+    const nvdaDistributed = Number(raw.nvdaDistributed ?? raw.nvda_distributed);
+    if (![marketCap, aiDistributed, nvdaDistributed].every(Number.isFinite)) throw new Error('MALFORMED_STATS_PAYLOAD');
+    return { marketCap, aiDistributed, nvdaDistributed };
+  };
+  const json = (o) => JSON.parse(JSON.stringify(o)); // what the browser actually receives
+  assert.doesNotThrow(() => siteNormalise(json(build({}, {}))), 'pre-launch: nothing sourced');
+  // Live, with a reward asset whose price has not loaded yet.
+  const unpriced = twoAssets({ totalRewarded: 30, totalRewarded2: 19000 }, { priceUsd: 220 }, {});
+  assert.doesNotThrow(() => siteNormalise(json(unpriced)), 'one unpriced asset must not fail the panel');
+  // And the real values still come through as dollars.
+  const live = siteNormalise(json(twoAssets({ totalRewarded: 30, totalRewarded2: 19000 }, { priceUsd: 220 }, { priceUsd: 0.3 })));
+  assert.strictEqual(live.nvdaDistributed, 6600);
+  assert.ok(Math.abs(live.aiDistributed - 5700) < 1e-9);
 });
