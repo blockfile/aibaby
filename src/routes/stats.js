@@ -247,7 +247,10 @@ function buildStats({
     // What the burned tokens are worth at today's price — a different figure
     // from what they cost, and it moves with the market.
     totalBurnedUsd: burnedUsd(burns, priceUsd),
-    burnedPctOfSupply: burnedPctOfSupply(burns, token),
+    // Preferred from the burns service, which computes it against what was
+    // MINTED. The local helper divides by the explorer's circulating figure,
+    // which a burn has already reduced — fine as a fallback, less exact.
+    burnedPctOfSupply: burns.burnedPctOfSupply ?? burnedPctOfSupply(burns, token),
     burns: burns.burns ?? null,
     // ── Bought back and KEPT (BUYBACK_HOLD_PCT) ─────────────────────────────
     // BABYINU the bot bought and holds. Deliberately apart from the burn fields
@@ -258,6 +261,16 @@ function buildStats({
     totalBoughtBackUsd:
       typeof burns.totalBoughtBack === 'number' && typeof priceUsd === 'number' ? burns.totalBoughtBack * priceUsd : null,
     buybacksHeld: burns.buybacksHeld ?? null,
+    // The two routes behind totalBurned. burn(uint256) moves totalSupply; a send
+    // to 0x…dEaD does not. Both are burns on this chain, but only one is visible
+    // to an explorer reading totalSupply, so the split is published rather than
+    // leaving that gap unexplained.
+    burnedBySupplyReduction: burns.burnedBySupplyReduction ?? null,
+    burnedToDeadAddress: burns.burnedToDeadAddress ?? null,
+    // What this bot's own cycles account for. A gap against totalBurned is the
+    // burns that happened outside a cycle.
+    totalBurnedByBot: burns.totalBurnedByBot ?? null,
+    circulatingSupply: burns.circulatingSupply ?? null,
 
     // ── Creator fees EARNED ─────────────────────────────────────────────────
     // What the launch has swept in total, before the split takes its share for

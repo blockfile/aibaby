@@ -252,6 +252,10 @@ DexScreener has nothing to say.
 | `burnQuoteSpent` | what those buybacks **cost**, in NVDA |
 | `totalBurnedUsd` | what the destroyed tokens are **worth today** |
 | `burnedPctOfSupply` | share of the original mint that has been burned |
+| `burnedToDeadAddress` | what sits at `0x…dEaD`, read from the token — includes burns done by hand |
+| `burnedBySupplyReduction` | what `burn(uint256)` took off `totalSupply` (0 here: this fork burns to `0x…dEaD`) |
+| `totalBurnedByBot` | what THIS bot's cycles account for; the gap against `totalBurned` is everything else |
+| `circulatingSupply` | `totalSupply()` as it stands now |
 | `burns` | how many buyback cycles have run |
 
 Cost and current value are deliberately separate fields: they answer different

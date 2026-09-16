@@ -14,6 +14,7 @@ const { getLaunch } = require('../evm/launch');
 const { escrowBalanceQuote } = require('../evm/escrow');
 const { sweepableQuote, pendingCreditQuote } = require('../evm/sweep');
 const { getQuotePrice } = require('../services/quoteprice');
+const { getTokenSupplyRaw, readTokenBalance } = require('../evm/erc20');
 const repo = require('../db/repository');
 const simvault = require('../evm/simvault');
 
@@ -158,6 +159,39 @@ function gaugeThreshold({ triggerMode, claimEveryUsd, claimEveryTokens, priceUsd
   return { thresholdUsd: claimEveryUsd, thresholdQuote: priced ? claimEveryUsd / priceUsd : null };
 }
 
+/**
+ * What is permanently out of circulation, read from the token itself.
+ *
+ * Done by the BOT because the public API makes no chain calls — same division
+ * as the fee gauge. Two reads a minute, and both are cheap.
+ *
+ * Never allowed to break a poll: this is display state, and a failed read means
+ * the API keeps serving its own ledger figure rather than nothing.
+ */
+async function readBurnedSupply(deps = {}) {
+  const token = deps.tokenAddress !== undefined ? deps.tokenAddress : config.tokenAddress;
+  if (!token || config.dryRun || !(config.tokenTotalSupply > 0)) return {};
+  try {
+    const decimals = config.tokenDecimals;
+    const [supplyRaw, deadRaw] = await Promise.all([
+      getTokenSupplyRaw(token),
+      readTokenBalance(token, config.deadAddress),
+    ]);
+    const supply = Number(supplyRaw) / 10 ** decimals;
+    return {
+      // burn(uint256) reduces totalSupply; a send to 0x…dEaD does not. Both are
+      // burns on this chain, so both are recorded — separately, because an
+      // explorer reading totalSupply only sees the first.
+      supplyReduced: config.tokenTotalSupply - supply,
+      deadBalance: Number(deadRaw) / 10 ** decimals,
+      circulatingSupply: supply,
+    };
+  } catch (err) {
+    console.warn(`[scheduler] could not read burned supply: ${err.message}`);
+    return {};
+  }
+}
+
 async function recordGauge(patch) {
   try {
     await repo.setDistributionState(patch);
@@ -236,7 +270,9 @@ async function pollOnce(trigger, deps = {}) {
     // it or counting it as ready to spend.
     const accrued = state.lastAccrued === null ? claimable : Math.max(claimable, state.lastAccrued);
     const priced = typeof priceUsd === 'number' && priceUsd > 0;
+    const burned = await readBurnedSupply(deps);
     await recordGauge({
+      ...burned,
       collectedQuote: claimable,
       collectedUsd: priced ? claimable * priceUsd : gate.usd,
       accruedQuote: accrued,
@@ -426,5 +462,5 @@ function _resetState() {
 
 module.exports = {
   start, pause, resume, triggerNow, pollOnce, getState,
-  getClaimableQuote, shouldFire, gaugeThreshold, planTasks, finishedGauge, _resetState,
+  getClaimableQuote, shouldFire, gaugeThreshold, planTasks, readBurnedSupply, finishedGauge, _resetState,
 };

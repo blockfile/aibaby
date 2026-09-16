@@ -540,3 +540,45 @@ test('kept totals are null before there is anything to report, not a fake 0', ()
   assert.strictEqual(out.totalBoughtBack, null);
   assert.strictEqual(out.totalBoughtBackUsd, null);
 });
+
+// ── Every burn counts, not only the ones this bot recorded ──────────────────
+
+test('the burn tile gets the chain figure and the breakdown behind it', () => {
+  // totalBurned counts both routes — supply reduction and the dead address —
+  // because neither can ever be spent. The split rides along because an
+  // explorer reading totalSupply only sees one of them, and a visitor who
+  // notices the gap deserves an answer rather than a contradiction.
+  const out = buildStats({
+    market: { priceUsd: 0.000065 },
+    token: {},
+    rewards: {},
+    burns: {
+      totalBurned: 19_002_670.303,
+      burnedBySupplyReduction: 1_641_149.103,
+      burnedToDeadAddress: 17_361_521.2,
+      totalBurnedByBot: 1_641_149.103,
+      burnedPctOfSupply: 1.9002670303,
+      circulatingSupply: 998_358_850.897,
+      burnQuoteSpent: 0.29,
+      burns: 5,
+    },
+    symbol: 'BABYINU',
+    tokenAddress: '0xtoken',
+  });
+  assert.ok(Math.abs(out.totalBurned - 19_002_670.303) < 1e-6);
+  assert.ok(Math.abs(out.burnedBySupplyReduction - 1_641_149.103) < 1e-6);
+  assert.ok(Math.abs(out.burnedToDeadAddress - 17_361_521.2) < 1e-6);
+  assert.ok(Math.abs(out.burnedPctOfSupply - 1.9002670303) < 1e-9, 'computed against what was MINTED');
+  assert.strictEqual(out.circulatingSupply, 998_358_850.897);
+  assert.ok(Math.abs(out.totalBurnedUsd - 19_002_670.303 * 0.000065) < 1e-6);
+});
+
+test('with no chain reading the burn tile still answers from the ledger', () => {
+  const out = buildStats({
+    market: {}, token: {}, rewards: {},
+    burns: { totalBurned: 1_641_149.103, totalBurnedByBot: 1_641_149.103, burnedBySupplyReduction: null, burnedToDeadAddress: null, burnedPctOfSupply: null },
+    symbol: 'BABYINU', tokenAddress: '0xtoken',
+  });
+  assert.ok(Math.abs(out.totalBurned - 1_641_149.103) < 1e-6);
+  assert.strictEqual(out.burnedToDeadAddress, null);
+});
