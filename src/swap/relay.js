@@ -74,16 +74,28 @@ async function call(path, { method = 'GET', body, timeoutMs, fetchImpl, cfg }) {
 /**
  * POST /quote. Returns Relay's raw response.
  *
- * A transient Relay error is retried once after a short pause — a quote is
- * read-only, so asking twice is harmless — and only then reported.
+ * A transient Relay error is retried — a quote is read-only, so asking again
+ * is harmless — and only reported once the retries or the deadline run out.
  */
-async function fetchQuote(body, { timeoutMs = 12_000, fetchImpl = fetch, cfg = config, retryDelayMs = 600 } = {}) {
-  try {
-    return await call('/quote', { method: 'POST', body, timeoutMs, fetchImpl, cfg });
-  } catch (err) {
-    if (!err.transient) throw err;
-    await new Promise((r) => setTimeout(r, retryDelayMs));
-    return call('/quote', { method: 'POST', body, timeoutMs, fetchImpl, cfg });
+async function fetchQuote(body, { deadlineMs = 10_000, fetchImpl = fetch, cfg = config, retryDelaysMs = [500, 1000, 2000], now = Date.now } = {}) {
+  // Measured 2026-09-22 on this token: about half of quotes in a bad window
+  // came back SERVER_ERROR, at random amounts and chains, and the same request
+  // worked seconds later — one quick retry was not enough. So up to three
+  // retries with growing pauses, all inside one deadline that stays under the
+  // site's 12s request timeout: a retry that could not finish in time is not
+  // attempted.
+  const started = now();
+  for (let attempt = 0; ; attempt += 1) {
+    const remaining = deadlineMs - (now() - started);
+    try {
+      return await call('/quote', { method: 'POST', body, timeoutMs: Math.max(1000, remaining), fetchImpl, cfg });
+    } catch (err) {
+      const pause = retryDelaysMs[attempt];
+      const left = deadlineMs - (now() - started);
+      // A retry needs its pause plus about 1.5s for Relay to answer.
+      if (!err.transient || pause === undefined || left < pause + 1500) throw err;
+      await new Promise((r) => setTimeout(r, pause));
+    }
   }
 }
 

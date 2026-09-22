@@ -117,7 +117,7 @@ Every error body is `{ "error": "...", "message": "...", "code": "..." }`.
 | 422 | Relay can't do it: below $10, amount too small for fees, no route | `message` — it says why, e.g. "minimum swap is $10 (this is $2.74)" |
 | 429 | rate limited | retry shortly |
 | 502 | Relay's answer failed our safety checks | `message`; nothing was sent to the wallet |
-| 503 | Relay's temporary problem (already retried once) | "try again" — the next auto-refresh usually works |
+| 503 | Relay's temporary problem (already retried up to three times) | "try again" — the next auto-refresh usually works |
 | 504 | Relay slower than 12s | retry |
 
 `request()` in `src/api/swap.js` maps 404/422 to `NO_ROUTE`, and

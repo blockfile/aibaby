@@ -41,23 +41,37 @@ test('a route Relay cannot do is a 422 carrying Relay’s words and code', async
   await assert.rejects(fetchQuote({}, { fetchImpl: f, cfg: CFG }), (e) => e instanceof RelayError && e.status === 422 && e.code === 'AMOUNT_TOO_LOW' && /too small/.test(e.message));
 });
 
-test('Relay’s SERVER_ERROR hiccup is retried once, and succeeds when Relay recovers', async () => {
-  // Measured live: the identical Ethereum quote failed with this, then worked.
-  const f = fakeFetch(reply(400, { errorCode: 'SERVER_ERROR', message: 'processing response error' }), reply(200, { ok: 1 }));
-  const out = await fetchQuote({}, { fetchImpl: f, cfg: CFG, retryDelayMs: 0 });
+const SERVER_ERROR = reply(400, { errorCode: 'SERVER_ERROR', message: 'processing response error' });
+const FAST = { retryDelaysMs: [0, 0, 0] };
+
+test('Relay’s SERVER_ERROR hiccups are retried until Relay recovers', async () => {
+  // Measured live: about half of quotes in a bad window failed like this, at
+  // random, and the identical request worked seconds later.
+  const f = fakeFetch(SERVER_ERROR, SERVER_ERROR, reply(200, { ok: 1 }));
+  const out = await fetchQuote({}, { fetchImpl: f, cfg: CFG, ...FAST });
   assert.deepStrictEqual(out, { ok: 1 });
-  assert.strictEqual(f.calls.length, 2);
+  assert.strictEqual(f.calls.length, 3);
 });
 
-test('a SERVER_ERROR that persists is a 503 "try again", never "no route"', async () => {
-  const f = fakeFetch(reply(400, { errorCode: 'SERVER_ERROR', message: 'processing response error' }));
-  await assert.rejects(fetchQuote({}, { fetchImpl: f, cfg: CFG, retryDelayMs: 0 }), (e) => e.status === 503 && /temporary/.test(e.message));
-  assert.strictEqual(f.calls.length, 2, 'retried exactly once');
+test('a SERVER_ERROR that persists is a 503 "try again" after three retries, never "no route"', async () => {
+  const f = fakeFetch(SERVER_ERROR);
+  await assert.rejects(fetchQuote({}, { fetchImpl: f, cfg: CFG, ...FAST }), (e) => e.status === 503 && /temporary/.test(e.message));
+  assert.strictEqual(f.calls.length, 4, 'one try plus three retries');
+});
+
+test('no retry starts that could not finish inside the deadline', async () => {
+  // The site gives up on a request after 12s, so the retries must stay inside
+  // 10s. With the clock already at 9.5s, a 500ms pause + ~1.5s answer won't fit.
+  let t = 0;
+  const f = fakeFetch(SERVER_ERROR);
+  const slowFetch = async (...a) => { t += 9500; return f(...a); };
+  await assert.rejects(fetchQuote({}, { fetchImpl: slowFetch, cfg: CFG, now: () => t }), (e) => e.status === 503);
+  assert.strictEqual(f.calls.length, 1);
 });
 
 test('a real refusal is not retried', async () => {
   const f = fakeFetch(reply(400, { errorCode: 'NO_SWAP_ROUTES_FOUND', message: 'no routes' }));
-  await assert.rejects(fetchQuote({}, { fetchImpl: f, cfg: CFG, retryDelayMs: 0 }), (e) => e.status === 422);
+  await assert.rejects(fetchQuote({}, { fetchImpl: f, cfg: CFG, ...FAST }), (e) => e.status === 422);
   assert.strictEqual(f.calls.length, 1);
 });
 

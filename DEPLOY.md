@@ -454,7 +454,7 @@ curl -s -X POST https://api.artificialbabyinu.com/swap/quote \
 ```
 
 A `503` "Relay had a temporary problem" is Relay's own intermittent
-`SERVER_ERROR`; the API already retried once. Run the curl again.
+`SERVER_ERROR`; the API already retried it three times within 10s. Run the curl again.
 
 ## Operational watch-list
 
