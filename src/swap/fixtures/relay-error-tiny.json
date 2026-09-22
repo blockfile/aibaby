@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "body": {
+    "message": "Swap output amount is too small to cover fees required to execute swap",
+    "errorCode": "AMOUNT_TOO_LOW",
+    "requestId": "0x1790083232bbe9f2b4c0b1315278db95590ae2e080bf8951dc6475308132c214"
+  }
+}

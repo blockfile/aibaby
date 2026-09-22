@@ -1,0 +1,371 @@
+{
+  "requestId": "0x1790083228c6be1058334e244a65e60b742b0accacb789ea06eccbad0b230b04",
+  "steps": [
+    {
+      "id": "deposit",
+      "action": "Confirm transaction in your wallet",
+      "description": "Depositing funds to the relayer to execute the swap for ABI",
+      "kind": "transaction",
+      "items": [
+        {
+          "status": "incomplete",
+          "data": {
+            "from": "0x1111111111111111111111111111111111111111",
+            "to": "0x4cd00e387622c35bddb9b4c962c136462338bc31",
+            "data": "0x49290c1c00000000000000000000000011111111111111111111111111111111111111114015ab7533aef0240f2156639cde2b03bf69cd7e434e78a128960c5aba01e19e",
+            "value": "10000000000000000",
+            "chainId": 8453,
+            "gas": "32713",
+            "maxFeePerGas": "25500000",
+            "maxPriorityFeePerGas": "20000000"
+          },
+          "check": {
+            "endpoint": "/intents/status?requestId=0x1790083228c6be1058334e244a65e60b742b0accacb789ea06eccbad0b230b04",
+            "method": "GET"
+          }
+        }
+      ],
+      "requestId": "0x1790083228c6be1058334e244a65e60b742b0accacb789ea06eccbad0b230b04",
+      "depositAddress": ""
+    }
+  ],
+  "fees": {
+    "gas": {
+      "currency": {
+        "chainId": 8453,
+        "address": "0x0000000000000000000000000000000000000000",
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.relay.link/icons/1/light.png",
+          "verified": true
+        }
+      },
+      "amount": "838009101789",
+      "amountFormatted": "0.000000838009101789",
+      "amountUsd": "0.002306",
+      "minimumAmount": "838009101789"
+    },
+    "relayer": {
+      "currency": {
+        "chainId": 8453,
+        "address": "0x0000000000000000000000000000000000000000",
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.relay.link/icons/1/light.png",
+          "verified": true
+        }
+      },
+      "amount": "72049526015575",
+      "amountFormatted": "0.000072049526015575",
+      "amountUsd": "0.198228",
+      "minimumAmount": "72049526015575"
+    },
+    "relayerGas": {
+      "currency": {
+        "chainId": 8453,
+        "address": "0x0000000000000000000000000000000000000000",
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.relay.link/icons/1/light.png",
+          "verified": true
+        }
+      },
+      "amount": "47847668870400",
+      "amountFormatted": "0.0000478476688704",
+      "amountUsd": "0.131642",
+      "minimumAmount": "47847668870400"
+    },
+    "relayerService": {
+      "currency": {
+        "chainId": 8453,
+        "address": "0x0000000000000000000000000000000000000000",
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.relay.link/icons/1/light.png",
+          "verified": true
+        }
+      },
+      "amount": "24201857145175",
+      "amountFormatted": "0.000024201857145175",
+      "amountUsd": "0.066586",
+      "minimumAmount": "24201857145175"
+    },
+    "app": {
+      "currency": {
+        "chainId": 8453,
+        "address": "0x0000000000000000000000000000000000000000",
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.relay.link/icons/1/light.png",
+          "verified": true
+        }
+      },
+      "amount": "0",
+      "amountFormatted": "0.0",
+      "amountUsd": "0",
+      "minimumAmount": "0"
+    },
+    "subsidized": {
+      "currency": {
+        "chainId": 8453,
+        "address": "0x0000000000000000000000000000000000000000",
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.relay.link/icons/1/light.png",
+          "verified": true
+        }
+      },
+      "amount": "0",
+      "amountFormatted": "0.0",
+      "amountUsd": "0",
+      "minimumAmount": "0"
+    }
+  },
+  "details": {
+    "operation": "swap",
+    "sender": "0x1111111111111111111111111111111111111111",
+    "recipient": "0x1111111111111111111111111111111111111111",
+    "currencyIn": {
+      "currency": {
+        "chainId": 8453,
+        "address": "0x0000000000000000000000000000000000000000",
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.relay.link/icons/1/light.png",
+          "verified": true
+        }
+      },
+      "amount": "10000000000000000",
+      "amountFormatted": "0.01",
+      "amountUsd": "27.512770",
+      "minimumAmount": "10000000000000000"
+    },
+    "currencyOut": {
+      "currency": {
+        "chainId": 4663,
+        "address": "0x657bd0541f2e8f89bdb85bcd91589695ca24b85a",
+        "symbol": "ABI",
+        "name": "Artificial Baby Inu",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.geckoterminal.com/ayncjain4swuk2v9h8vjiu19j4ge",
+          "verified": false
+        }
+      },
+      "amount": "124753016866012647514897",
+      "amountFormatted": "124753.016866012647514897",
+      "amountUsd": "26.821899",
+      "minimumAmount": "123505486697352521039748"
+    },
+    "refundCurrency": {
+      "currency": {
+        "chainId": 8453,
+        "address": "0x0000000000000000000000000000000000000000",
+        "symbol": "ETH",
+        "name": "Ether",
+        "decimals": 18,
+        "metadata": {
+          "logoURI": "https://assets.relay.link/icons/1/light.png",
+          "verified": true
+        }
+      },
+      "amount": "10000000000000000",
+      "amountFormatted": "0.01",
+      "amountUsd": "27.512770",
+      "minimumAmount": "10000000000000000"
+    },
+    "totalImpact": {
+      "usd": "-0.690871",
+      "percent": "-2.51"
+    },
+    "swapImpact": {
+      "usd": "-0.492643",
+      "percent": "-1.79"
+    },
+    "expandedPriceImpact": {
+      "swap": {
+        "usd": "-0.498008"
+      },
+      "execution": {
+        "usd": "-0.151627"
+      },
+      "relay": {
+        "usd": "-0.041237"
+      },
+      "app": {
+        "usd": "0"
+      },
+      "sponsored": {
+        "usd": "0"
+      }
+    },
+    "rate": "12475301.686601264",
+    "slippageTolerance": {
+      "total": "100",
+      "origin": {
+        "usd": "0.000000",
+        "value": "0",
+        "percent": "0.00"
+      },
+      "destination": {
+        "usd": "0.268219",
+        "value": "1247530168660126475149",
+        "percent": "1.00"
+      }
+    },
+    "timeEstimate": 1,
+    "userBalance": "0",
+    "isFixedRate": false,
+    "route": {
+      "origin": {
+        "inputCurrency": {
+          "currency": {
+            "chainId": 8453,
+            "address": "0x0000000000000000000000000000000000000000",
+            "symbol": "ETH",
+            "name": "Ether",
+            "decimals": 18,
+            "metadata": {
+              "logoURI": "https://assets.relay.link/icons/1/light.png",
+              "verified": true
+            }
+          },
+          "amount": "10000000000000000",
+          "amountFormatted": "0.01",
+          "amountUsd": "27.512770",
+          "minimumAmount": "10000000000000000"
+        },
+        "outputCurrency": {
+          "currency": {
+            "chainId": 8453,
+            "address": "0x0000000000000000000000000000000000000000",
+            "symbol": "ETH",
+            "name": "Ether",
+            "decimals": 18,
+            "metadata": {
+              "logoURI": "https://assets.relay.link/icons/1/light.png",
+              "verified": true
+            }
+          },
+          "amount": "10000000000000000",
+          "amountFormatted": "0.01",
+          "amountUsd": "27.512770",
+          "minimumAmount": "10000000000000000"
+        },
+        "router": "relay"
+      },
+      "destination": {
+        "inputCurrency": {
+          "currency": {
+            "chainId": 4663,
+            "address": "0x0000000000000000000000000000000000000000",
+            "symbol": "ETH",
+            "name": "Ether",
+            "decimals": 18,
+            "metadata": {
+              "logoURI": "https://assets.relay.link/icons/1/light.png",
+              "verified": true
+            }
+          },
+          "amount": "9927950473984425",
+          "amountFormatted": "0.009927950473984425",
+          "amountUsd": "27.335947",
+          "minimumAmount": "9927950473984425"
+        },
+        "outputCurrency": {
+          "currency": {
+            "chainId": 4663,
+            "address": "0x657bd0541f2e8f89bdb85bcd91589695ca24b85a",
+            "symbol": "ABI",
+            "name": "Artificial Baby Inu",
+            "decimals": 18,
+            "metadata": {
+              "logoURI": "https://assets.geckoterminal.com/ayncjain4swuk2v9h8vjiu19j4ge",
+              "verified": false
+            }
+          },
+          "amount": "124753016866012647514897",
+          "amountFormatted": "124753.016866012647514897",
+          "amountUsd": "26.821899",
+          "minimumAmount": "123505486697352521039748"
+        },
+        "router": "kyberswap"
+      }
+    }
+  },
+  "protocol": {
+    "v2": {
+      "orderId": "0x4015ab7533aef0240f2156639cde2b03bf69cd7e434e78a128960c5aba01e19e",
+      "hubType": "onchain",
+      "orderData": {
+        "version": "v1",
+        "solverChainId": "base",
+        "solver": "0xf70da97812cb96acdf810712aa562db8dfa3dbef",
+        "salt": "0xe0509ebc1f6ab805447c4c757d8b2bf11062084fea442d5c07afde009561a0a3",
+        "inputs": [
+          {
+            "payment": {
+              "chainId": "base",
+              "currency": "0x0000000000000000000000000000000000000000",
+              "amount": "10000000000000000",
+              "weight": "1"
+            },
+            "refunds": [
+              {
+                "chainId": "base",
+                "recipient": "0x1111111111111111111111111111111111111111",
+                "currency": "0x0000000000000000000000000000000000000000",
+                "minimumAmount": "0",
+                "deadline": 1790688028,
+                "extraData": "0x000000000000000000000000b92fe925dc43a0ecde6c8b1a2709c170ec4fff4f"
+              },
+              {
+                "chainId": "robinhood",
+                "recipient": "0x1111111111111111111111111111111111111111",
+                "currency": "0x0000000000000000000000000000000000000000",
+                "minimumAmount": "0",
+                "deadline": 1790688028,
+                "extraData": "0x000000000000000000000000b92fe925dc43a0ecde6c8b1a2709c170ec4fff4f"
+              }
+            ]
+          }
+        ],
+        "output": {
+          "chainId": "robinhood",
+          "payments": [
+            {
+              "recipient": "0x1111111111111111111111111111111111111111",
+              "currency": "0x657bd0541f2e8f89bdb85bcd91589695ca24b85a",
+              "minimumAmount": "123505486697352521039748",
+              "expectedAmount": "124753016866012647514897"
+            }
+          ],
+          "calls": [],
+          "deadline": 1790688028,
+          "extraData": "0x000000000000000000000000b92fe925dc43a0ecde6c8b1a2709c170ec4fff4f"
+        },
+        "fees": []
+      },
+      "paymentDetails": {
+        "chainId": "base",
+        "depository": "0x4cd00e387622c35bddb9b4c962c136462338bc31",
+        "currency": "0x0000000000000000000000000000000000000000",
+        "amount": "10000000000000000"
+      }
+    }
+  }
+}

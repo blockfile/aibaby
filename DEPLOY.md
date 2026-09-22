@@ -430,6 +430,32 @@ until curl -sf https://api.artificialbabyinu.com/health >/dev/null; do sleep 1; 
 curl -s https://api.artificialbabyinu.com/stats | head -c 200
 ```
 
+### Turning on "buy ABI from any chain" (/swap)
+
+Public API only — the bot is not restarted and holds nothing new.
+
+```bash
+cd /var/www/aibaby
+git pull && npm ci --omit=dev          # adds @solana/web3.js
+
+# Optional but recommended: a Relay API key (anonymous = ~5 quotes/window
+# shared by every visitor). The rest have working defaults.
+grep -q '^RELAY_API_KEY=' .env || echo 'RELAY_API_KEY=' >> .env
+nano .env                              # paste the key after RELAY_API_KEY=
+
+pm2 restart aibaby-api --update-env
+until curl -sf https://api.artificialbabyinu.com/health >/dev/null; do sleep 1; done
+
+# Six coins listed, and a live price for 0.01 ETH on Base:
+curl -s https://api.artificialbabyinu.com/swap/tokens | jq '[.tokens[] | "\(.symbol)/\(.chain)"]'
+curl -s -X POST https://api.artificialbabyinu.com/swap/quote \
+  -H 'content-type: application/json' \
+  -d '{"fromToken":"ETH","fromChain":"base","amount":"0.01","slippage":1}' | jq '{quoteId, toAmount, priceImpactPct, fee}'
+```
+
+A `503` "Relay had a temporary problem" is Relay's own intermittent
+`SERVER_ERROR`; the API already retried once. Run the curl again.
+
 ## Operational watch-list
 
 - **Wallet ETH.** Gas is not self-funding at the start — income is NVDA, and it

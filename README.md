@@ -283,6 +283,33 @@ which is the order that keeps a wrong address from costing you anything.
 
 All require `x-api-key: $API_KEY`.
 
+### Buy ABI from any chain — `/swap`
+
+The site's "Swap for $ABI" section calls these. [Relay](https://relay.link)
+routes a native coin on another chain straight into the token on Robinhood
+Chain, in one wallet signature. This process only quotes and shapes the
+transaction; **the buyer's wallet signs, and there is no key here.**
+
+| Endpoint | Does |
+| --- | --- |
+| `GET /swap/tokens` | the six pay coins: ETH on Ethereum, Base, Arbitrum, Optimism; BNB; SOL |
+| `POST /swap/quote` | price-only quote, no wallet needed; returns a `quoteId` good for 60s |
+| `POST /swap/execute` | `{quoteId, wallet, recipient?}` → one transaction to sign (`tx` or `solanaTx`) |
+| `GET /swap/status/:trackingId` | pending → bridging → delivering → done / failed |
+
+- The destination is fixed server-side to the launch token on chain 4663; no
+  request can change it.
+- Every Relay answer is checked before it reaches a wallet: exactly one
+  deposit, on the coin's own chain, from the buyer's wallet, delivering the
+  token to the chosen recipient.
+- SOL buyers must name a 0x `recipient` — a Solana wallet has no Robinhood
+  address.
+- No fee is added; the buyer pays Relay's fee and price impact only.
+
+The frontend handoff (what the site must change, with examples) is
+[docs/FRONTEND-SWAP-HANDOFF.md](docs/FRONTEND-SWAP-HANDOFF.md); the design is
+[docs/superpowers/specs/2026-09-22-cross-chain-swap-design.md](docs/superpowers/specs/2026-09-22-cross-chain-swap-design.md).
+
 ## Quick start
 
 ```bash

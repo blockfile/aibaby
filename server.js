@@ -10,6 +10,7 @@ const { router: rewardsRouter } = require('./src/routes/rewards');
 const { router: burnsRouter } = require('./src/routes/burns');
 const { router: tokenRouter } = require('./src/routes/token');
 const { router: distributionRouter } = require('./src/routes/distribution');
+const { createSwapRouter } = require('./src/routes/swap');
 
 const app = express();
 app.disable('x-powered-by');
@@ -55,6 +56,10 @@ app.get('/', (req, res) => {
       'GET /burns?cursor&limit',
       'GET /distribution',
       'GET /health',
+      'GET /swap/tokens',
+      'POST /swap/quote',
+      'POST /swap/execute',
+      'GET /swap/status/:trackingId',
     ],
   });
 });
@@ -72,6 +77,12 @@ for (const base of ['/', '/api']) {
   app.use(base, burnsRouter);
   app.use(base, distributionRouter);
 }
+
+// Buy the token from any chain. One router instance behind both prefixes, so
+// a quote made under /swap can be executed under /api/swap and vice versa.
+const swapRouter = createSwapRouter();
+app.use('/swap', swapRouter);
+app.use('/api/swap', swapRouter);
 
 app.use((req, res) => res.status(404).json({ error: 'not found' }));
 

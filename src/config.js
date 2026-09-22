@@ -341,6 +341,19 @@ const config = {
     .map((s) => s.trim())
     .filter(Boolean),
 
+  // ── API: buy ABI from any chain (routes under /swap) ───────────────────────
+  // Relay routes a native coin on another chain straight into the token on
+  // Robinhood Chain in one signature. The API only quotes and shapes
+  // transactions; the buyer's wallet signs. No key is involved.
+  swapEnabled: bool(process.env.SWAP_ENABLED, true),
+  relayUrl: (process.env.RELAY_URL || 'https://api.relay.link').replace(/\/+$/, ''),
+  // Anonymous Relay allows about 5 quotes per window per IP, and every visitor
+  // shares this server's IP. A key raises that to 50/min.
+  relayApiKey: process.env.RELAY_API_KEY || null,
+  solanaRpcUrl: process.env.SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+  // Refused below this, and refused when Relay gives no dollar value at all.
+  minSwapUsd: num(process.env.MIN_SWAP_USD, 10),
+
   // ── Bot: chain access ──────────────────────────────────────────────────────
   dryRun: DRY_RUN,
   rpcUrl: process.env.RPC_URL || 'https://rpc.mainnet.chain.robinhood.com',
